@@ -1,0 +1,5 @@
+{
+  "name": "Sales Flow",
+  "description": "An AI-powered B2B SaaS tool that helps users find potential customers (leads) on Reddit by creating campaigns, scanning for relevant posts, and generating engaging comments.",
+  "requestFramePermissions": []
+}

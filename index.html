@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* CSS Variables for Theming */
+      :root {
+        --bg-primary: #0d0d0d;
+        --bg-secondary: #1C1D21;
+        --bg-tertiary: #111217;
+        --text-primary: #e5e7eb;
+        --text-secondary: #9ca3af;
+        --border-color: rgba(107, 114, 128, 0.5); /* gray-500/50 */
+        --brand-primary: #8B5CF6; /* violet-500 */
+        --brand-secondary: #38bdf8; /* sky-400 */
+        --success: #22c55e; /* green-500 */
+        --danger: #ef4444; /* red-500 */
+      }
+      .light {
+        --bg-primary: #f7f8fc; /* A very light, cool gray */
+        --bg-secondary: #ffffff; /* Pure white for cards */
+        --bg-tertiary: #eff1f8; /* A slightly darker cool gray */
+        --text-primary: #2d3748; /* Dark slate */
+        --text-secondary: #64748b; /* Medium slate */
+        --border-color: #e2e8f0; /* Light slate gray */
+      }
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+
+      /* Page Transition Animation */
+      @keyframes page-enter {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-page-enter {
+        animation: page-enter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+
+      /* Staggered List Animation */
+      .stagger-in > * {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInSlideUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+
+      @keyframes fadeInSlideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      /* Custom styles for range input */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: #D1D5DB; /* gray-300 light */
+        border-radius: 9999px;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity .2s;
+      }
+      .dark input[type="range"] {
+         background: #374151; /* gray-700 dark */
+      }
+      input[type="range"]:hover {
+        opacity: 1;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--brand-primary);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--bg-secondary);
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: var(--brand-primary);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--bg-secondary);
+      }
+
+      /* Scroll-triggered Animation */
+      .scroll-target {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+      }
+      .scroll-target.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .stagger-children > * {
+        transition-delay: var(--stagger-delay, 0s);
+      }
+      .hero-bg {
+        background-image: radial-gradient(circle at 1px 1px, var(--border-color) 1px, transparent 0);
+        background-size: 2rem 2rem;
+      }
+    </style>
+    <script>
+      // Prevent Flash of Unstyled Content (FOUC) for theme
+      (function() {
+        const theme = localStorage.getItem('salesflow_theme') || 'dark';
+        document.documentElement.className = theme;
+      })();
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

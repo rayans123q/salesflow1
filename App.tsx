@@ -1,0 +1,667 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { Page, Campaign, Post, AIStyleSettings, Theme, RedditCredentials, User, Subscription } from './types';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import CampaignsList from './components/CampaignsList';
+import CampaignCreator from './components/CampaignCreator';
+import FindingLeads from './components/FindingLeads';
+import CampaignPosts from './components/CampaignPosts';
+import Settings from './components/Settings';
+import AdminPanel from './components/AdminPanel';
+import Notification from './components/Notification';
+import { findLeads } from './services/geminiService';
+import LandingPage from './components/LandingPage';
+import LoginModal from './components/LoginModal';
+import ConfirmationModal from './components/ConfirmationModal';
+import { databaseService } from './services/databaseService';
+import { supabase } from './services/supabaseClient';
+
+// Keep theme in localStorage for immediate access before user loads
+const THEME_STORAGE_KEY = 'salesflow_theme';
+
+const App: React.FC = () => {
+    // Auth State
+    const [user, setUser] = useState<User | null>(null);
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Start with loading true to check session
+    const [isInitializing, setIsInitializing] = useState(true);
+    const isLoggedIn = !!user;
+
+    const [page, setPage] = useState<Page>('DASHBOARD');
+    
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [commentHistory, setCommentHistory] = useState<Record<number, string[]>>({});
+    const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
+    const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+    const [findingLeadsCampaign, setFindingLeadsCampaign] = useState<Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'> | null>(null);
+    const [isClearDataModalOpen, setClearDataModalOpen] = useState(false);
+
+    const [theme, setTheme] = useState<Theme>(() => {
+        return (localStorage.getItem(THEME_STORAGE_KEY) as Theme) || 'dark';
+    });
+
+    const [redditCreds, setRedditCreds] = useState<RedditCredentials | null>(null);
+    const [subscription, setSubscription] = useState<Subscription>({ subscribed: false, status: 'inactive' });
+
+    const [limits] = useState({ campaigns: 10, refreshes: 50, aiResponses: 250 });
+    const [usage, setUsage] = useState({ campaigns: 0, refreshes: 0, aiResponses: 0 });
+
+    const defaultAiStyle: Omit<AIStyleSettings, 'customOffer' | 'saveStyle'> = {
+        tone: 'Friendly & Warm',
+        salesApproach: 'Moderate',
+        length: 'Medium',
+        includeWebsiteLink: true,
+    };
+
+    const [savedAiStyle, setSavedAiStyle] = useState<Omit<AIStyleSettings, 'customOffer' | 'saveStyle'>>(defaultAiStyle);
+
+    const showNotification = useCallback((type: 'success' | 'error', message: string) => {
+        setNotification({type, message});
+    }, []);
+
+    // Check for existing session and listen for auth state changes
+    useEffect(() => {
+        // Initialize app - check session and setup auth listener
+        const initializeApp = async () => {
+            try {
+                // Check session with timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('timeout')), 2000)
+                );
+                const sessionPromise = supabase.auth.getSession();
+                const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
+                const session = result?.data?.session;
+                
+                if (session?.user) {
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('id, name, email, role')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (userData) {
+                        setUser(userData);
+                    } else {
+                        setUser({
+                            id: session.user.id,
+                            name: session.user.user_metadata?.name || 'User',
+                            email: session.user.email,
+                            role: 'user',
+                        });
+                    }
+                }
+            } catch (error) {
+                console.log('Session check skipped');
+            } finally {
+                setIsInitializing(false);
+                setIsLoading(false);
+            }
+        };
+
+        initializeApp();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+                setUser({
+                    id: session.user.id,
+                    name: session.user.user_metadata?.name || 'User',
+                    email: session.user.email,
+                    role: 'user',
+                });
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+            }
+        });
+
+        return () => {
+            subscription?.unsubscribe();
+        };
+    }, []);
+
+    // Handle URL-based routing for /admin path
+    useEffect(() => {
+        const handleUrlChange = () => {
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/admin')) {
+                if (user?.role === 'admin') {
+                    setPage('ADMIN');
+                } else if (isLoggedIn) {
+                    // Non-admin users trying to access /admin get redirected to dashboard
+                    window.history.replaceState({}, '', '/');
+                    setPage('DASHBOARD');
+                }
+            }
+        };
+
+        // Check URL on mount and when user changes
+        handleUrlChange();
+
+        // Listen for popstate events (back/forward button)
+        window.addEventListener('popstate', handleUrlChange);
+        return () => window.removeEventListener('popstate', handleUrlChange);
+    }, [user?.role, isLoggedIn]);
+
+    // Sync page state to URL
+    useEffect(() => {
+        if (page === 'ADMIN' && user?.role === 'admin') {
+            window.history.pushState({}, '', '/admin');
+        } else if (page === 'DASHBOARD') {
+            window.history.pushState({}, '', '/');
+        }
+    }, [page, user?.role]);
+
+    // Load user data from Supabase when user logs in
+    useEffect(() => {
+        if (!user?.id) {
+            // Clear data when user logs out
+            setCampaigns([]);
+            setPosts([]);
+            setCommentHistory({});
+            setSavedAiStyle(defaultAiStyle);
+            setUsage({ campaigns: 0, refreshes: 0, aiResponses: 0 });
+            setRedditCreds(null);
+            setSubscription({ subscribed: false, status: 'inactive' });
+            return;
+        }
+
+        const loadUserData = async () => {
+            setIsLoading(true);
+            try {
+                // Load campaigns, posts, settings, and comment history in parallel
+                const [campaignsData, postsData, settingsData, commentHistoryData] = await Promise.all([
+                    databaseService.getCampaigns(user.id!),
+                    databaseService.getPosts(user.id!),
+                    databaseService.getUserSettings(user.id!),
+                    databaseService.getCommentHistory(user.id!),
+                ]);
+
+                setCampaigns(campaignsData);
+                setPosts(postsData);
+                setTheme(settingsData.theme);
+                setSavedAiStyle(settingsData.aiStyle);
+                setRedditCreds(settingsData.redditCreds);
+                setSubscription(settingsData.subscription);
+                setUsage(settingsData.usage);
+                setCommentHistory(commentHistoryData);
+        } catch (error) {
+                console.error('Failed to load user data:', error);
+                showNotification('error', 'Failed to load data from database.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadUserData();
+    }, [user?.id, showNotification]);
+
+    // Update usage when campaigns change
+    useEffect(() => {
+        if (user?.id) {
+            databaseService.updateUserSettings(user.id, {
+                usage: { campaigns: campaigns.length }
+            }).catch(err => console.error('Failed to update usage:', err));
+        }
+        setUsage(prev => ({ ...prev, campaigns: campaigns.length }));
+    }, [campaigns.length, user?.id]);
+
+    // Update theme in localStorage and Supabase
+    useEffect(() => {
+        document.documentElement.className = theme;
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+        if (user?.id) {
+            databaseService.updateUserSettings(user.id, { theme }).catch(err => console.error('Failed to update theme:', err));
+        }
+    }, [theme, user?.id]);
+
+    const handleLogin = () => {
+        setShowLoginModal(true);
+    };
+
+    const handlePerformLogin = async (userData: { id: string; email: string; name: string }) => {
+        try {
+            setUser({
+                id: userData.id,
+                name: userData.name,
+            });
+            setShowLoginModal(false);
+            showNotification('success', 'Successfully signed in!');
+        } catch (error) {
+            console.error('Failed to login:', error);
+            showNotification('error', 'Failed to login. Please try again.');
+        }
+    }
+
+    const handleLogout = async () => {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error('Error signing out:', error);
+                showNotification('error', 'Failed to sign out. Please try again.');
+            } else {
+                setUser(null);
+                setPage('DASHBOARD'); // Reset to default page on logout
+                showNotification('success', 'Successfully signed out!');
+            }
+        } catch (error) {
+            console.error('Error signing out:', error);
+            showNotification('error', 'Failed to sign out. Please try again.');
+        }
+    };
+
+    const handleToggleTheme = async () => {
+        const newTheme = theme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        if (user?.id) {
+            try {
+                await databaseService.updateUserSettings(user.id, { theme: newTheme });
+            } catch (error) {
+                console.error('Failed to update theme:', error);
+            }
+        }
+    };
+
+    const handleExportData = () => {
+        const dataToExport = {
+            user,
+            campaigns,
+            posts,
+            savedAiStyle,
+            usage,
+            commentHistory,
+            redditCreds,
+            theme,
+        };
+        const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+            JSON.stringify(dataToExport, null, 2)
+        )}`;
+        const link = document.createElement("a");
+        link.href = jsonString;
+        link.download = `salesflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        showNotification('success', 'Data exported successfully!');
+    };
+    
+    const handleClearAllData = async () => {
+        if (!user?.id) return;
+        
+        try {
+            setIsLoading(true);
+            // Delete all campaigns (posts and comment history will be deleted via CASCADE)
+            const userCampaigns = await databaseService.getCampaigns(user.id);
+            await Promise.all(userCampaigns.map(c => databaseService.deleteCampaign(c.id)));
+            
+            // Reset settings
+            await databaseService.updateUserSettings(user.id, {
+                aiStyle: defaultAiStyle,
+                redditCreds: null,
+                usage: { campaigns: 0, refreshes: 0, aiResponses: 0 },
+            });
+            
+        // Clear state
+        setCampaigns([]);
+        setPosts([]);
+        setCommentHistory({});
+        setSavedAiStyle(defaultAiStyle);
+        setUsage({ campaigns: 0, refreshes: 0, aiResponses: 0 });
+        setRedditCreds(null);
+        
+        setClearDataModalOpen(false);
+        showNotification('success', 'All application data has been cleared.');
+            setPage('DASHBOARD');
+        } catch (error) {
+            console.error('Failed to clear data:', error);
+            showNotification('error', 'Failed to clear data. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const handleCreateCampaign = async (newCampaignData: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>) => {
+        if (!user?.id) return;
+        
+        if (usage.campaigns >= limits.campaigns) {
+            showNotification('error', `Campaign limit reached (${limits.campaigns}/${limits.campaigns}).`);
+            setPage('CAMPAIGNS');
+            return;
+        }
+        
+        setFindingLeadsCampaign(newCampaignData);
+        setPage('FINDING_LEADS');
+        
+        try {
+            const hasActiveSubscription = subscription.subscribed && subscription.status === 'active';
+            const generatedPosts = await findLeads(newCampaignData, redditCreds, hasActiveSubscription);
+
+            const newCampaign: Campaign = await databaseService.createCampaign(user.id, {
+                ...newCampaignData,
+                status: 'active',
+                leadsFound: generatedPosts.length,
+                highPotential: generatedPosts.filter(p => p.relevance > 95).length,
+                contacted: 0,
+                createdAt: new Date().toISOString(),
+                lastRefreshed: new Date().toISOString(),
+            });
+
+            // Create posts in database
+            const postsToCreate = generatedPosts.map(p => ({
+                ...p,
+                campaignId: newCampaign.id,
+                status: 'new' as const,
+            }));
+            
+            const createdPosts = await databaseService.createPosts(postsToCreate);
+
+            setCampaigns(prev => [...prev, newCampaign]);
+            setPosts(prev => [...prev, ...createdPosts]);
+            setPage('CAMPAIGNS');
+            showNotification('success', `Campaign "${newCampaign.name}" created successfully!`);
+
+        } catch (error) {
+            console.error("Failed to find leads:", error);
+            showNotification('error', `Failed to find posts. Please try again.`);
+            setPage('CREATE_CAMPAIGN');
+        } finally {
+            setFindingLeadsCampaign(null);
+        }
+    };
+
+    const handleDeleteCampaign = async (campaignId: number) => {
+        const campaignToDelete = campaigns.find(c => c.id === campaignId);
+        if (!campaignToDelete) {
+            console.warn('Campaign not found:', campaignId);
+            return;
+        }
+        
+        try {
+            console.log('🗑️ Deleting campaign:', campaignId, campaignToDelete.name);
+            await databaseService.deleteCampaign(campaignId);
+            console.log('✅ Campaign deleted successfully');
+            
+            setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+            setPosts(prev => prev.filter(p => p.campaignId !== campaignId));
+            showNotification('success', `Campaign "${campaignToDelete.name}" deleted.`);
+            
+            if (page === 'CAMPAIGN_POSTS' && selectedCampaignId === campaignId) {
+                setPage('CAMPAIGNS');
+            }
+        } catch (error) {
+            console.error('❌ Failed to delete campaign:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('Error details:', errorMessage);
+            showNotification('error', `Failed to delete campaign: ${errorMessage}`);
+        }
+    };
+    
+    const handleRefreshCampaign = async (campaignId: number): Promise<number> => {
+        if (!user?.id) return 0;
+        
+        if (usage.refreshes >= limits.refreshes) {
+            showNotification('error', `Refresh limit reached (${limits.refreshes}/${limits.refreshes}).`);
+            return 0;
+        }
+
+        const campaignToRefresh = campaigns.find(c => c.id === campaignId);
+        if (!campaignToRefresh) {
+            showNotification('error', 'Campaign not found.');
+            return 0;
+        }
+        
+        const newUsage = {...usage, refreshes: usage.refreshes + 1};
+        setUsage(newUsage);
+        if (user.id) {
+            databaseService.updateUserSettings(user.id, { usage: newUsage }).catch(err => console.error('Failed to update usage:', err));
+        }
+
+        try {
+            const { id, status, leadsFound, highPotential, contacted, createdAt, lastRefreshed, ...campaignData } = campaignToRefresh;
+            const hasActiveSubscription = subscription.subscribed && subscription.status === 'active';
+            const generatedPosts = await findLeads(campaignData, redditCreds, hasActiveSubscription);
+
+            const existingPostUrls = new Set(posts.filter(p => p.campaignId === campaignId).map(p => p.url));
+            const newPostsFromApi = generatedPosts.filter(p => !existingPostUrls.has(p.url));
+
+            if (newPostsFromApi.length === 0) {
+                showNotification('success', 'No new posts found.');
+                const updatedCampaign = await databaseService.updateCampaign(campaignId, {
+                    lastRefreshed: new Date().toISOString(),
+                });
+                setCampaigns(prev => prev.map(c => c.id === campaignId ? updatedCampaign : c));
+                return 0;
+            }
+
+            const postsToCreate = newPostsFromApi.map(p => ({
+                ...p,
+                campaignId: campaignId,
+                status: 'new' as const,
+            }));
+
+            const createdPosts = await databaseService.createPosts(postsToCreate);
+            const updatedCampaign = await databaseService.updateCampaign(campaignId, {
+                leadsFound: campaignToRefresh.leadsFound + createdPosts.length,
+                highPotential: campaignToRefresh.highPotential + createdPosts.filter(p => p.relevance > 95).length,
+                        lastRefreshed: new Date().toISOString(),
+            });
+
+            setPosts(prev => [...prev, ...createdPosts]);
+            setCampaigns(prev => prev.map(c => c.id === campaignId ? updatedCampaign : c));
+            
+            showNotification('success', `${createdPosts.length} new posts found for "${campaignToRefresh.name}".`);
+            return createdPosts.length;
+        } catch (error) {
+            console.error("Failed to refresh campaign:", error);
+            showNotification('error', `Failed to refresh campaign. Please try again.`);
+            throw error;
+        }
+    };
+    
+    const handleViewPosts = useCallback((campaignId: number) => {
+        setSelectedCampaignId(campaignId);
+        setPage('CAMPAIGN_POSTS');
+    }, []);
+
+    const markPostAsContacted = async (postId: number) => {
+        const post = posts.find(p => p.id === postId);
+        if (!post || post.status === 'contacted') return;
+        
+        try {
+            await databaseService.updatePost(postId, { status: 'contacted' });
+            const campaign = campaigns.find(c => c.id === post.campaignId);
+            if (campaign) {
+                const updatedCampaign = await databaseService.updateCampaign(post.campaignId, {
+                    contacted: campaign.contacted + 1,
+                });
+                setCampaigns(prev => prev.map(c => c.id === post.campaignId ? updatedCampaign : c));
+            }
+            setPosts(prev => prev.map(p => p.id === postId ? { ...p, status: 'contacted' } : p));
+        } catch (error) {
+            console.error('Failed to mark post as contacted:', error);
+            showNotification('error', 'Failed to update post. Please try again.');
+        }
+    }
+
+    const handleGenerateAiResponse = async (): Promise<boolean> => {
+        if (!user?.id) return false;
+        
+        if (usage.aiResponses >= limits.aiResponses) {
+            showNotification('error', `AI response limit reached (${limits.aiResponses}/${limits.aiResponses}).`);
+            return false;
+        }
+        const newUsage = { ...usage, aiResponses: usage.aiResponses + 1 };
+        setUsage(newUsage);
+        try {
+            await databaseService.updateUserSettings(user.id, { usage: newUsage });
+        } catch (error) {
+            console.error('Failed to update usage:', error);
+        }
+        showNotification('success', `AI response used (${newUsage.aiResponses}/${limits.aiResponses}).`);
+        return true;
+    };
+
+    const handleAddCommentToHistory = async (postId: number, comment: string) => {
+        try {
+            await databaseService.addCommentToHistory(postId, comment);
+            // Reload comment history for this post
+            if (user?.id) {
+                const history = await databaseService.getCommentHistory(user.id, postId);
+                setCommentHistory(prev => ({ ...prev, ...history }));
+            }
+        } catch (error) {
+            console.error('Failed to add comment to history:', error);
+        }
+    };
+
+    const renderPage = () => {
+        const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
+
+        switch (page) {
+            case 'DASHBOARD':
+                return <Dashboard campaigns={campaigns} posts={posts} onCreateCampaign={() => setPage('CREATE_CAMPAIGN')} />;
+            case 'CAMPAIGNS':
+                return <CampaignsList campaigns={campaigns} onCreateCampaign={() => setPage('CREATE_CAMPAIGN')} onViewPosts={handleViewPosts} onDeleteCampaign={handleDeleteCampaign} />;
+            case 'SETTINGS':
+                return <Settings 
+                            theme={theme} 
+                            onToggleTheme={handleToggleTheme}
+                            redditCreds={redditCreds}
+                            setRedditCreds={async (creds) => {
+                                setRedditCreds(creds);
+                                if (user?.id) {
+                                    try {
+                                        await databaseService.updateUserSettings(user.id, { redditCreds: creds });
+                                    } catch (error) {
+                                        console.error('Failed to save Reddit credentials:', error);
+                                        showNotification('error', 'Failed to save Reddit credentials.');
+                                    }
+                                }
+                            }}
+                            subscription={subscription}
+                            setSubscription={async (sub) => {
+                                setSubscription(sub);
+                                if (user?.id) {
+                                    try {
+                                        await databaseService.updateUserSettings(user.id, { subscription: sub });
+                                        if (sub.subscribed && sub.status === 'active') {
+                                            showNotification('success', 'Reddit API subscription activated!');
+                                        } else if (!sub.subscribed) {
+                                            showNotification('success', 'Reddit API subscription cancelled.');
+                                        }
+                                    } catch (error) {
+                                        console.error('Failed to update subscription:', error);
+                                        showNotification('error', 'Failed to update subscription.');
+                                    }
+                                }
+                            }}
+                            onLogout={handleLogout}
+                            user={user}
+                            setUser={async (updatedUser) => {
+                                if (updatedUser && user?.id && updatedUser.name !== user.name) {
+                                    try {
+                                        // Update user name in database
+                                        const updated = await databaseService.updateUserName(user.id, updatedUser.name);
+                                        setUser(updated);
+                                    } catch (error) {
+                                        console.error('Failed to update user:', error);
+                                        showNotification('error', 'Failed to update user name.');
+                                    }
+                                } else {
+                                    setUser(updatedUser);
+                                }
+                            }}
+                            savedAiStyle={savedAiStyle}
+                            setSavedAiStyle={async (style) => {
+                                setSavedAiStyle(style);
+                                if (user?.id) {
+                                    try {
+                                        await databaseService.updateUserSettings(user.id, { aiStyle: style });
+                                    } catch (error) {
+                                        console.error('Failed to save AI style:', error);
+                                        showNotification('error', 'Failed to save AI style settings.');
+                                    }
+                                }
+                            }}
+                            onExportData={handleExportData}
+                            onClearAllData={() => setClearDataModalOpen(true)}
+                        />;
+            case 'CREATE_CAMPAIGN':
+                return <CampaignCreator 
+                            onBack={() => setPage('DASHBOARD')} 
+                            onCreate={handleCreateCampaign}
+                        />;
+            case 'FINDING_LEADS':
+                return <FindingLeads campaignData={findingLeadsCampaign} />;
+            case 'CAMPAIGN_POSTS':
+                if (selectedCampaign) {
+                     return <CampaignPosts 
+                                campaign={selectedCampaign} 
+                                posts={posts.filter(p => p.campaignId === selectedCampaignId)} 
+                                onBack={() => setPage('CAMPAIGNS')}
+                                onPostContacted={markPostAsContacted}
+                                savedAiStyle={savedAiStyle}
+                                setSavedAiStyle={setSavedAiStyle}
+                                onDeleteCampaign={handleDeleteCampaign}
+                                onRefreshCampaign={handleRefreshCampaign}
+                                onGenerateAiResponse={handleGenerateAiResponse}
+                                commentHistory={commentHistory}
+                                onAddCommentToHistory={handleAddCommentToHistory}
+                            />;
+                }
+                setPage('CAMPAIGNS'); // Fallback
+                return null;
+            case 'ADMIN':
+                if (user?.role === 'admin') {
+                    return <AdminPanel />;
+                }
+                setPage('DASHBOARD');
+                return null;
+            default:
+                return <Dashboard campaigns={campaigns} posts={posts} onCreateCampaign={() => setPage('CREATE_CAMPAIGN')} />;
+        }
+    };
+
+    // Show loading state while checking session
+    if (isInitializing) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
+                <div className="text-[var(--text-primary)]">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!isLoggedIn) {
+        return (
+            <>
+                <LandingPage onLogin={handleLogin} />
+                <LoginModal 
+                    isOpen={showLoginModal} 
+                    onClose={() => setShowLoginModal(false)}
+                    onLogin={handlePerformLogin}
+                />
+            </>
+        )
+    }
+
+    return (
+        <div className="md:flex md:h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
+            <Sidebar currentPage={page} setPage={setPage} usage={usage} limits={limits} user={user} />
+            <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+                <Notification notification={notification} onClose={() => setNotification(null)} />
+                 <ConfirmationModal
+                    isOpen={isClearDataModalOpen}
+                    onClose={() => setClearDataModalOpen(false)}
+                    onConfirm={handleClearAllData}
+                    title="Clear All Data"
+                    message="Are you sure you want to delete all campaigns, posts, and settings? This action is irreversible."
+                    confirmButtonText="Yes, Clear Everything"
+                />
+                <div key={page} className="animate-page-enter">
+                    {renderPage()}
+                </div>
+            </main>
+        </div>
+    );
+};
+
+export default App;
