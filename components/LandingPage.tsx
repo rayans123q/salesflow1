@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SparkleIcon, CheckIcon, CampaignIcon, SearchIcon, CloseIcon } from '../constants';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import SocialProof from './SocialProof';
+import TestimonialCards from './TestimonialCards';
 import { whopService } from '../services/whopService';
 
 // Helper component for animated sections
@@ -296,6 +297,7 @@ const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                 <HeroSection onLogin={onLogin} />
                 <FeaturesSection />
                 <SocialProof />
+                <TestimonialCards />
                 <StorySection />
                 <PricingSection onLogin={onLogin} />
             </main>
