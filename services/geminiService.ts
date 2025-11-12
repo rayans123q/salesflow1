@@ -2,6 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIStyleSettings, Campaign, Post, RedditCredentials, LeadSource } from '../types';
 import apiKeyManager from './apiKeyManager';
+import { redditOAuthService } from './redditOAuthService';
 
 // Initialize Gemini AI client with first available API key
 let currentApiKey = apiKeyManager.getNextApiKey();
@@ -81,12 +82,115 @@ interface RawRedditPost {
     subreddit_name_prefixed: string;
 }
 
+// Search Reddit using OAuth (when username/password are available)
+const searchRedditWithOAuth = async (campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>, creds: RedditCredentials): Promise<{
+    title: string;
+    content: string;
+    postUrl: string;
+    subreddit: string;
+}[]> => {
+    const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
+    const fullQuery = campaign.negativeKeywords?.length
+        ? `${keywordsQuery} NOT (${campaign.negativeKeywords.join(' OR ')})`
+        : keywordsQuery;
+    
+    const dateRangeMap = {
+        lastDay: 'day',
+        lastWeek: 'week',
+        lastMonth: 'month',
+    };
+    const time = dateRangeMap[campaign.dateRange];
+
+    const normalizedSubreddits = campaign.subreddits && campaign.subreddits.length > 0
+        ? campaign.subreddits.map(sr => sr.replace(/^r\//, '').toLowerCase())
+        : [];
+
+    const allResults: { title: string; content: string; postUrl: string; subreddit: string }[] = [];
+
+    if (normalizedSubreddits.length > 0) {
+        console.log(`🔍 OAuth: Searching ${normalizedSubreddits.length} subreddit(s): ${normalizedSubreddits.join(', ')}`);
+        
+        for (const subreddit of normalizedSubreddits) {
+            try {
+                const posts = await redditOAuthService.searchReddit({
+                    query: fullQuery,
+                    subreddit: subreddit,
+                    sort: 'new',
+                    time: time as any,
+                    limit: 25,
+                });
+
+                const subredditResults = posts.map(p => ({
+                    title: p.title,
+                    content: p.content,
+                    postUrl: p.postUrl,
+                    subreddit: p.subreddit,
+                }));
+
+                console.log(`  ✅ OAuth: Found ${subredditResults.length} posts from r/${subreddit}`);
+                allResults.push(...subredditResults);
+            } catch (error) {
+                console.warn(`  ⚠️ OAuth: Error searching r/${subreddit}:`, error instanceof Error ? error.message : 'Unknown error');
+                continue;
+            }
+        }
+    } else {
+        console.log('🔍 OAuth: Searching all of Reddit');
+        try {
+            const posts = await redditOAuthService.searchReddit({
+                query: fullQuery,
+                sort: 'new',
+                time: time as any,
+                limit: 25,
+            });
+
+            const globalResults = posts.map(p => ({
+                title: p.title,
+                content: p.content,
+                postUrl: p.postUrl,
+                subreddit: p.subreddit,
+            }));
+
+            console.log(`  ✅ OAuth: Found ${globalResults.length} posts from all of Reddit`);
+            allResults.push(...globalResults);
+        } catch (error) {
+            console.error('❌ OAuth: Error searching Reddit:', error);
+            throw error;
+        }
+    }
+
+    // Remove duplicates
+    const uniqueResults = Array.from(
+        new Map(allResults.map(post => [post.postUrl, post])).values()
+    );
+
+    console.log(`📊 OAuth: Total unique posts found: ${uniqueResults.length}`);
+    return uniqueResults;
+};
+
 const searchRedditApi = async (campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>, creds: RedditCredentials): Promise<{
     title: string;
     content: string;
     postUrl: string;
     subreddit: string;
 }[]> => {
+    // Check if OAuth service is configured (has username/password)
+    // Only use OAuth in production (when Netlify functions are available)
+    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+    
+    if (redditOAuthService.isConfigured() && isProduction) {
+        console.log('🔐 Using Reddit OAuth authentication (Production)');
+        try {
+            return await searchRedditWithOAuth(campaign, creds);
+        } catch (error) {
+            console.warn('⚠️ OAuth failed, falling back to public API:', error);
+            // Fall through to public API
+        }
+    }
+    
+    // Fall back to public API with Basic auth
+    console.log('🔓 Using Reddit public API with Basic auth');
+    
     const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
     const fullQuery = campaign.negativeKeywords?.length
         ? `${keywordsQuery} NOT (${campaign.negativeKeywords.join(' OR ')})`
@@ -836,7 +940,11 @@ export const findLeads = async (
         promises.push(
             findRedditPostsInternal(campaign, redditCreds, userHasSubscription)
                 .then(posts => processResults(posts, 'reddit'))
-                .catch(err => { console.error("Error finding Reddit posts:", err); return []; })
+                .catch(err => { 
+                    console.error("Error finding Reddit posts:", err); 
+                    // Return empty array on error - fallback already handled in findRedditPostsInternal
+                    return []; 
+                })
         );
     }
 

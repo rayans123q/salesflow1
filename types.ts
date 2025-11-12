@@ -62,7 +62,7 @@ export interface RedditCredentials {
   clientSecret?: string; // Optional, not required for public API access
 }
 
-export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'expired';
+export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'expired' | 'trialing';
 export type SubscriptionPlan = 'free' | 'starter' | 'pro' | 'enterprise';
 
 export interface Subscription {
@@ -71,4 +71,12 @@ export interface Subscription {
   startedAt?: string;
   expiresAt?: string;
   plan?: SubscriptionPlan;
+}
+
+export interface OnboardingStep {
+  target: string;
+  title: string;
+  content: string;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  beaconPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 }

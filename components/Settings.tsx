@@ -250,119 +250,71 @@ const Settings: React.FC<SettingsProps> = (props) => {
                         <span className="ml-3 text-sm text-[var(--text-primary)]">Include Website Link by default</span>
                     </label>
                 </SettingsSection>
-                
+
                 <SettingsSection
-                    title="Reddit API Subscription"
-                    description="Subscribe to use our company's Reddit API service. No need to set up your own API credentials!"
+                    title="Subscription"
+                    description="Manage your $9/month subscription to access Sales Flow."
                 >
                     <div className="space-y-4">
-                        <div className={`p-4 rounded-lg border-2 ${subscription.subscribed && subscription.status === 'active' 
-                            ? 'bg-green-900/20 border-green-500/50' 
-                            : 'bg-[var(--bg-tertiary)] border-gray-700'
-                        }`}>
+                        <div className="p-4 rounded-lg border-2 bg-gradient-to-r from-violet-900/20 to-sky-900/20 border-violet-500/50">
                             <div className="flex items-center justify-between mb-3">
                                 <div>
-                                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">Reddit API Service</h3>
-                                    <p className="text-sm text-[var(--text-secondary)]">Monthly recurring subscription</p>
+                                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">Sales Flow Pro</h3>
+                                    <p className="text-sm text-[var(--text-secondary)]">$9/month - Full access</p>
                                 </div>
-                                {subscription.subscribed && subscription.status === 'active' && (
-                                    <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm font-semibold border border-green-500/50">
-                                        ✓ Active
-                                    </span>
-                                )}
+                                <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm font-semibold border border-green-500/50">
+                                    ✓ Active
+                                </span>
                             </div>
                             
-                            <div className="space-y-3 mb-4">
-                                <div className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-1">✓</span>
-                                    <div>
-                                        <p className="text-sm font-medium text-[var(--text-primary)]">Real-time Reddit Data</p>
-                                        <p className="text-xs text-[var(--text-secondary)]">Get the latest posts directly from Reddit</p>
-                                    </div>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <CheckIcon className="w-4 h-4 text-green-400" />
+                                    <span className="text-[var(--text-primary)]">Unlimited campaigns</span>
                                 </div>
-                                <div className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-1">✓</span>
-                                    <div>
-                                        <p className="text-sm font-medium text-[var(--text-primary)]">No Setup Required</p>
-                                        <p className="text-xs text-[var(--text-secondary)]">We handle all API credentials for you</p>
-                                    </div>
+                                <div className="flex items-center gap-2">
+                                    <CheckIcon className="w-4 h-4 text-green-400" />
+                                    <span className="text-[var(--text-primary)]">AI-powered lead discovery</span>
                                 </div>
-                                <div className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-1">✓</span>
-                                    <div>
-                                        <p className="text-sm font-medium text-[var(--text-primary)]">Better Performance</p>
-                                        <p className="text-xs text-[var(--text-secondary)]">Faster searches and higher rate limits</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                    <span className="text-green-400 mt-1">✓</span>
-                                    <div>
-                                        <p className="text-sm font-medium text-[var(--text-primary)]">Automatic Fallback</p>
-                                        <p className="text-xs text-[var(--text-secondary)]">Falls back to Gemini Search if needed</p>
-                                    </div>
+                                <div className="flex items-center gap-2">
+                                    <CheckIcon className="w-4 h-4 text-green-400" />
+                                    <span className="text-[var(--text-primary)]">Priority support</span>
                                 </div>
                             </div>
-
-                            {subscription.subscribed && subscription.status === 'active' ? (
-                                <div className="space-y-3">
-                                    {subscription.expiresAt && (
-                                        <p className="text-sm text-[var(--text-secondary)]">
-                                            Subscription expires: {new Date(subscription.expiresAt).toLocaleDateString()}
-                                        </p>
-                                    )}
-                                    <button
-                                        onClick={async () => {
-                                            const newSub: Subscription = {
-                                                subscribed: false,
-                                                status: 'cancelled',
-                                                startedAt: subscription.startedAt,
-                                                expiresAt: subscription.expiresAt,
-                                            };
-                                            await setSubscription(newSub);
-                                        }}
-                                        disabled
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Cancel Subscription
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={async () => {
-                                        // In a real app, this would redirect to a payment page
-                                        // For now, we'll activate it directly
-                                        const now = new Date().toISOString();
-                                        const expiresAt = new Date();
-                                        expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month from now
-                                        
-                                        const newSub: Subscription = {
-                                            subscribed: true,
-                                            status: 'active',
-                                            startedAt: now,
-                                            expiresAt: expiresAt.toISOString(),
-                                        };
-                                        await setSubscription(newSub);
-                                    }}
-                                    className="w-full bg-[var(--brand-primary)] hover:opacity-90 text-white font-semibold py-3 px-4 rounded-lg transition-opacity"
-                                >
-                                    Subscribe Now - $9.99/month
-                                </button>
-                            )}
                         </div>
-                        
+
+                        <div className="flex gap-3">
+                            <a
+                                href="https://whop.com/hub"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] font-semibold px-4 py-2 rounded-lg transition-colors text-center"
+                            >
+                                Manage Subscription
+                            </a>
+                            <a
+                                href="https://whop.com/hub"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-semibold px-4 py-2 rounded-lg transition-colors text-center"
+                            >
+                                Cancel Subscription
+                            </a>
+                        </div>
+
                         <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-blue-300">
-                            <p><strong>Note:</strong> When you subscribe, you'll automatically use our company's Reddit API. Your own API credentials (if any) will be used as a fallback if the subscription is inactive.</p>
+                            <p><strong>Note:</strong> Manage your subscription, update payment methods, or cancel anytime through your account dashboard.</p>
                         </div>
                     </div>
                 </SettingsSection>
                 
                 <SettingsSection
                     title="API Integrations (Advanced)"
-                    description="Alternatively, connect your own API keys. This option is available if you prefer to use your own Reddit API credentials."
+                    description="Connect your own Reddit API credentials if you prefer to use your own account."
                 >
                     <form onSubmit={handleSaveCreds} className="space-y-4 bg-[var(--bg-tertiary)] p-4 rounded-lg border border-gray-700">
                         <div className="flex items-center justify-between">
-                        <p className="text-lg font-semibold">Reddit API Credentials</p>
+                            <p className="text-lg font-semibold">Reddit API Credentials</p>
                             {isCredsPresent && (
                                 <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/50">
                                     ✓ Configured

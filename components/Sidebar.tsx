@@ -11,11 +11,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, setPage, usage, limits, user }) => {
-    const navItems: { page: Page; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
-        { page: 'DASHBOARD', label: 'Dashboard', icon: <DashboardIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" /> },
-        { page: 'CAMPAIGNS', label: 'Campaigns', icon: <CampaignIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" /> },
-        { page: 'SETTINGS', label: 'Settings', icon: <SettingsIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" /> },
-        { page: 'ADMIN', label: 'Admin', icon: <SettingsIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" />, adminOnly: true },
+    const navItems: { page: Page; label: string; icon: React.ReactNode; adminOnly?: boolean; id: string }[] = [
+        { page: 'DASHBOARD', label: 'Dashboard', icon: <DashboardIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" />, id: 'sidebar-dashboard-btn' },
+        { page: 'CAMPAIGNS', label: 'Campaigns', icon: <CampaignIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" />, id: 'sidebar-campaigns-btn' },
+        { page: 'SETTINGS', label: 'Settings', icon: <SettingsIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" />, id: 'sidebar-settings-btn' },
+        { page: 'ADMIN', label: 'Admin', icon: <SettingsIcon className="w-6 h-6 mb-1 md:w-5 md:h-5 md:mb-0" />, adminOnly: true, id: 'sidebar-admin-btn' },
     ];
 
     const isAdmin = user?.role === 'admin';
@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setPage, usage, limits, 
                         return (
                             <li key={item.page} className="h-full md:h-auto md:mb-2">
                                 <button
+                                    id={item.id}
                                     onClick={() => setPage(item.page)}
                                     className={`flex flex-col items-center justify-center p-2 rounded-lg text-center transition-colors duration-200 w-24 h-full
                                         md:w-full md:flex-row md:justify-start md:gap-3 md:px-4 md:py-2 md:text-left

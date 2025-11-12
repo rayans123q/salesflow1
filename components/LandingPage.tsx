@@ -1,6 +1,8 @@
-import React from 'react';
-import { SparkleIcon, CheckIcon, CampaignIcon, SearchIcon } from '../constants';
+import React, { useState } from 'react';
+import { SparkleIcon, CheckIcon, CampaignIcon, SearchIcon, CloseIcon } from '../constants';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+import SocialProof from './SocialProof';
+import { whopService } from '../services/whopService';
 
 // Helper component for animated sections
 const AnimatedSection: React.FC<{ children: React.ReactNode; className?: string; stagger?: boolean }> = ({ children, className, stagger = false }) => {
@@ -36,26 +38,79 @@ const Header: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
 );
 
 // Hero Section
-const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
-    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 text-center overflow-hidden hero-bg">
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-primary)] via-[var(--bg-primary)]/80 to-transparent z-10"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60rem] h-[60rem] rounded-full bg-[var(--brand-primary)]/10 blur-[150px]"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
-            <AnimatedSection>
-                <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-[var(--text-primary)] mb-6">
-                    Find B2B Leads on Social Media, <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)]">Effortlessly.</span>
-                </h1>
-                <p className="max-w-2xl mx-auto text-lg md:text-xl text-[var(--text-secondary)] mb-10">
-                    Sales Flow scans Reddit and Discord for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
-                </p>
-                <button onClick={onLogin} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
-                    Get Started for Free
-                </button>
-            </AnimatedSection>
-        </div>
-    </section>
-);
+const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const sectionRef = React.useRef<HTMLElement>(null);
+
+    const handleGetStarted = () => {
+        const checkoutUrl = whopService.getCheckoutUrl();
+        
+        if (checkoutUrl !== '#') {
+            window.location.href = checkoutUrl;
+        } else {
+            onLogin();
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+        if (sectionRef.current) {
+            const rect = sectionRef.current.getBoundingClientRect();
+            setMousePosition({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            });
+        }
+    };
+
+    return (
+        <section 
+            ref={sectionRef}
+            onMouseMove={handleMouseMove}
+            className="relative pt-32 pb-20 md:pt-48 md:pb-32 text-center overflow-hidden hero-bg"
+        >
+            {/* Video Background */}
+            <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover z-0"
+            >
+                <source src="/v/173656-849839042.mp4" type="video/mp4" />
+            </video>
+            
+            {/* Dark overlay with spotlight effect */}
+            <div 
+                className="absolute inset-0 bg-black/80 z-10 pointer-events-none"
+                style={{
+                    maskImage: `radial-gradient(circle 300px at ${mousePosition.x}px ${mousePosition.y}px, transparent 0%, black 100%)`,
+                    WebkitMaskImage: `radial-gradient(circle 300px at ${mousePosition.x}px ${mousePosition.y}px, transparent 0%, black 100%)`,
+                }}
+            ></div>
+            
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[var(--bg-primary)]/40 via-transparent to-[var(--bg-primary)]/60 z-10 pointer-events-none"></div>
+            
+            {/* Glow effect */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60rem] h-[60rem] rounded-full bg-[var(--brand-primary)]/10 blur-[150px] z-10 pointer-events-none"></div>
+            
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+                <AnimatedSection>
+                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-6 drop-shadow-lg">
+                        Find B2B Leads on Social Media, <br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)]">Effortlessly.</span>
+                    </h1>
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-200 mb-10 drop-shadow-md">
+                        Sales Flow scans Reddit and Discord for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
+                    </p>
+                    <button onClick={handleGetStarted} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
+                        Get Started - $9/month
+                    </button>
+                </AnimatedSection>
+            </div>
+        </section>
+    );
+};
 
 
 // Feature Card
@@ -103,44 +158,106 @@ const FeaturesSection: React.FC = () => (
     </section>
 );
 
-// Pricing Section
-const PricingSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
-    <section id="pricing" className="py-20 bg-[var(--bg-secondary)]">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-             <AnimatedSection>
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
-                    <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Choose the plan that's right for you. Get started for free.</p>
+// Calendly Modal Component
+const CalendlyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="relative w-full max-w-4xl h-[90vh] bg-[var(--bg-primary)] rounded-2xl shadow-2xl border border-[var(--border-color)] overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                    <h3 className="text-xl font-bold text-[var(--text-primary)]">Book a Call With Us</h3>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
+                        aria-label="Close"
+                    >
+                        <CloseIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+                    </button>
                 </div>
-            </AnimatedSection>
-            <div className="grid lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                 <AnimatedSection stagger className="col-span-3 lg:col-span-1" >
-                    <div className="bg-[var(--bg-tertiary)] p-8 rounded-2xl border border-[var(--border-color)] h-full flex flex-col" style={{'--stagger-delay': '0ms'} as React.CSSProperties}>
-                        <h3 className="text-2xl font-bold">Starter</h3>
-                        <p className="text-[var(--text-secondary)] mt-2 mb-6">For individuals and small teams.</p>
-                        <p className="text-4xl font-extrabold mb-6">$0<span className="text-lg font-normal text-[var(--text-secondary)]">/mo</span></p>
-                        <ul className="space-y-4 text-[var(--text-secondary)] mb-8 flex-grow">
-                            <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>10 Campaigns</li>
-                            <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>50 Refreshes/mo</li>
-                            <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>250 AI Responses/mo</li>
-                        </ul>
-                        <button onClick={onLogin} className="w-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">
-                            Start for Free
-                        </button>
-                    </div>
-                 </AnimatedSection>
-                <div className="lg:col-span-2 space-y-4">
-                    <AnimatedSection>
-                    <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] text-center" style={{'--stagger-delay': '150ms'} as React.CSSProperties}>
-                        <h3 className="text-xl font-bold">Need More?</h3>
-                        <p className="text-[var(--text-secondary)] mt-2">More plans with higher limits and team features are coming soon. Contact us for early access.</p>
-                    </div>
-                     </AnimatedSection>
-                </div>
+                {/* Calendly Embed */}
+                <iframe
+                    src="https://calendly.com/dateflow4/30min"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    className="bg-white"
+                    title="Book a call"
+                />
             </div>
         </div>
-    </section>
-);
+    );
+};
+
+// Pricing Section
+const PricingSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
+    const [isCalendlyOpen, setIsCalendlyOpen] = useState(false);
+
+    const handleGetStarted = () => {
+        // Get Whop checkout URL with redirect
+        const checkoutUrl = whopService.getCheckoutUrl();
+        
+        if (checkoutUrl !== '#') {
+            // Redirect to Whop checkout
+            window.location.href = checkoutUrl;
+        } else {
+            // Fallback to login if Whop not configured
+            onLogin();
+        }
+    };
+
+    return (
+        <>
+            <section id="pricing" className="py-20 bg-[var(--bg-secondary)]">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <AnimatedSection>
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
+                            <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Subscribe to access Sales Flow and start finding leads.</p>
+                        </div>
+                    </AnimatedSection>
+                    <div className="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        <AnimatedSection stagger className="col-span-3 lg:col-span-1">
+                            <div className="bg-[var(--bg-tertiary)] p-8 rounded-2xl border border-[var(--border-color)] h-full flex flex-col" style={{'--stagger-delay': '0ms'} as React.CSSProperties}>
+                                <h3 className="text-2xl font-bold">Starter</h3>
+                                <p className="text-[var(--text-secondary)] mt-2 mb-6">For individuals and small teams.</p>
+                                <p className="text-4xl font-extrabold mb-6">$9<span className="text-lg font-normal text-[var(--text-secondary)]">/mo</span></p>
+                                <ul className="space-y-4 text-[var(--text-secondary)] mb-8 flex-grow">
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Unlimited Campaigns</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>50 Refreshes/mo</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>250 AI Responses/mo</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Priority Support</li>
+                                </ul>
+                                <button 
+                                    onClick={handleGetStarted} 
+                                    className="w-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity"
+                                >
+                                    Get Started
+                                </button>
+                            </div>
+                        </AnimatedSection>
+                        <div className="lg:col-span-2 space-y-4">
+                            <AnimatedSection>
+                                <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] text-center" style={{'--stagger-delay': '150ms'} as React.CSSProperties}>
+                                    <h3 className="text-xl font-bold mb-4">Need More?</h3>
+                                    <p className="text-[var(--text-secondary)] mb-4">More plans with higher limits and team features are coming soon. Contact us for early access.</p>
+                                    <button
+                                        onClick={() => setIsCalendlyOpen(true)}
+                                        className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity"
+                                    >
+                                        Book a Call
+                                    </button>
+                                </div>
+                            </AnimatedSection>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <CalendlyModal isOpen={isCalendlyOpen} onClose={() => setIsCalendlyOpen(false)} />
+        </>
+    );
+};
 
 
 // Our Story Section
@@ -178,6 +295,7 @@ const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
             <main>
                 <HeroSection onLogin={onLogin} />
                 <FeaturesSection />
+                <SocialProof />
                 <StorySection />
                 <PricingSection onLogin={onLogin} />
             </main>

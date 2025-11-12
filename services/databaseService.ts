@@ -468,7 +468,7 @@ export const databaseService = {
     theme: Theme;
     aiStyle: Omit<AIStyleSettings, 'saveStyle'>;
     redditCreds: RedditCredentials | null;
-    subscription: { subscribed: boolean; status: 'active' | 'inactive' | 'cancelled' | 'expired'; startedAt?: string; expiresAt?: string };
+    subscription: { subscribed: boolean; status: 'active' | 'inactive' | 'cancelled' | 'expired' | 'trialing'; startedAt?: string; expiresAt?: string };
     usage: { campaigns: number; refreshes: number; aiResponses: number };
   }> {
     const { data, error } = await supabase
@@ -512,7 +512,7 @@ export const databaseService = {
       } : null,
       subscription: {
         subscribed: data.reddit_api_subscribed || false,
-        status: (data.subscription_status || 'inactive') as 'active' | 'inactive' | 'cancelled' | 'expired',
+        status: (data.subscription_status || 'inactive') as 'active' | 'inactive' | 'cancelled' | 'expired' | 'trialing',
         startedAt: data.subscription_started_at || undefined,
         expiresAt: data.subscription_expires_at || undefined,
       },
@@ -530,7 +530,7 @@ export const databaseService = {
       theme?: Theme;
       aiStyle?: Partial<Omit<AIStyleSettings, 'saveStyle'>>;
       redditCreds?: RedditCredentials | null;
-      subscription?: Partial<{ subscribed: boolean; status: 'active' | 'inactive' | 'cancelled' | 'expired'; startedAt?: string; expiresAt?: string }>;
+      subscription?: Partial<{ subscribed: boolean; status: 'active' | 'inactive' | 'cancelled' | 'expired' | 'trialing'; startedAt?: string; expiresAt?: string }>;
       usage?: Partial<{ campaigns: number; refreshes: number; aiResponses: number }>;
     }
   ): Promise<void> {

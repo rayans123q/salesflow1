@@ -29,6 +29,7 @@ const Dashboard: React.FC<DashboardProps> = ({ campaigns, posts, onCreateCampaig
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h1 className="text-3xl font-bold text-[var(--text-primary)]">Dashboard</h1>
                 <button 
+                    id="create-campaign-btn"
                     onClick={onCreateCampaign}
                     className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:opacity-90 transition-opacity w-full sm:w-auto"
                 >

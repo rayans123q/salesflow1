@@ -13,11 +13,15 @@ import { findLeads } from './services/geminiService';
 import LandingPage from './components/LandingPage';
 import LoginModal from './components/LoginModal';
 import ConfirmationModal from './components/ConfirmationModal';
+import OnboardingTour from './components/OnboardingTour';
+import PaymentGate from './components/PaymentGate';
 import { databaseService } from './services/databaseService';
 import { supabase } from './services/supabaseClient';
+import { whopService } from './services/whopService';
 
 // Keep theme in localStorage for immediate access before user loads
 const THEME_STORAGE_KEY = 'salesflow_theme';
+const ONBOARDING_KEY = 'salesflow_onboarding_complete';
 
 const App: React.FC = () => {
     // Auth State
@@ -36,6 +40,9 @@ const App: React.FC = () => {
     const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
     const [findingLeadsCampaign, setFindingLeadsCampaign] = useState<Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'> | null>(null);
     const [isClearDataModalOpen, setClearDataModalOpen] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [hasSubscription, setHasSubscription] = useState(false);
+    const [showPaymentGate, setShowPaymentGate] = useState(false);
 
     const [theme, setTheme] = useState<Theme>(() => {
         return (localStorage.getItem(THEME_STORAGE_KEY) as Theme) || 'dark';
@@ -227,11 +234,69 @@ const App: React.FC = () => {
             });
             setShowLoginModal(false);
             showNotification('success', 'Successfully signed in!');
+            
+            // Check subscription status
+            if (whopService.isConfigured()) {
+                const hasActive = await whopService.hasActiveSubscription(userData.id);
+                setHasSubscription(hasActive);
+                setShowPaymentGate(!hasActive);
+            } else {
+                // If Whop not configured, grant access (development mode)
+                setHasSubscription(true);
+                setShowPaymentGate(false);
+            }
+            
+            // Check if user has completed onboarding
+            const hasOnboarded = localStorage.getItem(ONBOARDING_KEY);
+            if (!hasOnboarded && hasSubscription) {
+                setShowOnboarding(true);
+            }
         } catch (error) {
             console.error('Failed to login:', error);
             showNotification('error', 'Failed to login. Please try again.');
         }
     }
+    
+    // Handle payment success redirect
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentSuccess = urlParams.get('payment');
+        
+        if (paymentSuccess === 'success') {
+            // Clear URL parameter
+            window.history.replaceState({}, '', '/');
+            
+            if (user?.id) {
+                // User is logged in, verify subscription
+                showNotification('success', 'Payment successful! Verifying your subscription...');
+                
+                setTimeout(async () => {
+                    const hasActive = await whopService.hasActiveSubscription(user.id);
+                    setHasSubscription(hasActive);
+                    setShowPaymentGate(!hasActive);
+                    
+                    if (hasActive) {
+                        showNotification('success', 'Welcome to Sales Flow! Your subscription is active.');
+                        
+                        // Show onboarding if first time
+                        const hasOnboarded = localStorage.getItem(ONBOARDING_KEY);
+                        if (!hasOnboarded) {
+                            setShowOnboarding(true);
+                        }
+                    }
+                }, 1500);
+            } else {
+                // User not logged in, show login modal
+                showNotification('success', 'Payment successful! Please log in to access your subscription.');
+                setShowLoginModal(true);
+            }
+        }
+    }, [user?.id, showNotification]);
+    
+    const handleOnboardingComplete = () => {
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+        setShowOnboarding(false);
+    };
 
     const handleLogout = async () => {
         try {
@@ -643,8 +708,23 @@ const App: React.FC = () => {
         )
     }
 
+    // Show payment gate if user doesn't have subscription
+    if (showPaymentGate && user?.id) {
+        return (
+            <PaymentGate
+                userId={user.id}
+                onAccessGranted={() => {
+                    setHasSubscription(true);
+                    setShowPaymentGate(false);
+                    showNotification('success', 'Welcome! Your subscription is active.');
+                }}
+            />
+        );
+    }
+
     return (
         <div className="md:flex md:h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
+            {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
             <Sidebar currentPage={page} setPage={setPage} usage={usage} limits={limits} user={user} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
                 <Notification notification={notification} onClose={() => setNotification(null)} />

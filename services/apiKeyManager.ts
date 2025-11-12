@@ -3,13 +3,32 @@
  * When one key fails, automatically tries the next one
  */
 
+// Load API keys from environment variable (comma-separated)
+const loadApiKeys = (): string[] => {
+    // Try new format first (VITE_GEMINI_API_KEYS with comma-separated values)
+    const keysEnv = (import.meta as any).env?.VITE_GEMINI_API_KEYS;
+    if (keysEnv) {
+        const keys = keysEnv.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+        if (keys.length > 0) {
+            console.log(`🔑 Loaded ${keys.length} Gemini API key(s) from VITE_GEMINI_API_KEYS`);
+            return keys;
+        }
+    }
+    
+    // Fallback to old format (individual keys)
+    const fallbackKeys = [
+        process.env.GEMINI_API_KEY_1 || 'AIzaSyCjDLc3zO4tXIMu9uiOVMP_Q4eJwVz9HDc',
+        process.env.GEMINI_API_KEY_2 || 'AIzaSyC99H2gTi9xNLdBL1EZKsdnTjkjAjN7UlU',
+        process.env.GEMINI_API_KEY_3 || 'AIzaSyDtMvkS3dL67t9JlzyUA0BDLRp330W6Kas',
+        process.env.GEMINI_API_KEY_4 || 'AIzaSyCcrdqUiJhzHojcgOLHpF_5kxRNUAD3F4A',
+    ].filter(k => k && k.length > 0);
+    
+    console.log(`🔑 Loaded ${fallbackKeys.length} Gemini API key(s) from fallback`);
+    return fallbackKeys;
+};
+
 // List of API keys to try in order
-const API_KEYS = [
-    process.env.GEMINI_API_KEY_1 || 'AIzaSyCjDLc3zO4tXIMu9uiOVMP_Q4eJwVz9HDc',
-    process.env.GEMINI_API_KEY_2 || 'AIzaSyC99H2gTi9xNLdBL1EZKsdnTjkjAjN7UlU',
-    process.env.GEMINI_API_KEY_3 || 'AIzaSyDtMvkS3dL67t9JlzyUA0BDLRp330W6Kas',
-    process.env.GEMINI_API_KEY_4 || 'AIzaSyCcrdqUiJhzHojcgOLHpF_5kxRNUAD3F4A',
-];
+const API_KEYS = loadApiKeys();
 
 // Track which keys have failed
 const failedKeys = new Set<string>();
