@@ -283,27 +283,23 @@ const Settings: React.FC<SettingsProps> = (props) => {
                             </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="p-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg">
+                            <h4 className="font-semibold text-[var(--text-primary)] mb-2">Need Help?</h4>
+                            <p className="text-sm text-[var(--text-secondary)] mb-3">
+                                For subscription changes, billing questions, or cancellations, contact our support team.
+                            </p>
                             <a
-                                href="https://whop.com/hub"
+                                href="https://calendly.com/dateflow4/30min"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex-1 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] font-semibold px-4 py-2 rounded-lg transition-colors text-center"
+                                className="inline-flex items-center gap-2 bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
                             >
-                                Manage Subscription
-                            </a>
-                            <a
-                                href="https://whop.com/hub"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 font-semibold px-4 py-2 rounded-lg transition-colors text-center"
-                            >
-                                Cancel Subscription
+                                📞 Contact Support
                             </a>
                         </div>
 
-                        <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-blue-300">
-                            <p><strong>Note:</strong> Manage your subscription, update payment methods, or cancel anytime through your account dashboard.</p>
+                        <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg text-xs text-amber-300">
+                            <p><strong>Auto-Renewal:</strong> Your subscription renews automatically each month. You'll receive an email reminder 3 days before renewal.</p>
                         </div>
                     </div>
                 </SettingsSection>
