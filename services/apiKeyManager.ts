@@ -15,16 +15,22 @@ const loadApiKeys = (): string[] => {
         }
     }
     
-    // Fallback to old format (individual keys)
+    // Fallback to individual keys (VITE_GEMINI_API_KEY_1, VITE_GEMINI_API_KEY_2, etc.)
     const fallbackKeys = [
-        process.env.GEMINI_API_KEY_1 || 'AIzaSyCjDLc3zO4tXIMu9uiOVMP_Q4eJwVz9HDc',
-        process.env.GEMINI_API_KEY_2 || 'AIzaSyC99H2gTi9xNLdBL1EZKsdnTjkjAjN7UlU',
-        process.env.GEMINI_API_KEY_3 || 'AIzaSyDtMvkS3dL67t9JlzyUA0BDLRp330W6Kas',
-        process.env.GEMINI_API_KEY_4 || 'AIzaSyCcrdqUiJhzHojcgOLHpF_5kxRNUAD3F4A',
+        (import.meta as any).env?.VITE_GEMINI_API_KEY_1,
+        (import.meta as any).env?.VITE_GEMINI_API_KEY_2,
+        (import.meta as any).env?.VITE_GEMINI_API_KEY_3,
+        (import.meta as any).env?.VITE_GEMINI_API_KEY_4,
+        (import.meta as any).env?.VITE_GEMINI_API_KEY_5,
     ].filter(k => k && k.length > 0);
     
-    console.log(`🔑 Loaded ${fallbackKeys.length} Gemini API key(s) from fallback`);
-    return fallbackKeys;
+    if (fallbackKeys.length > 0) {
+        console.log(`🔑 Loaded ${fallbackKeys.length} Gemini API key(s) from individual VITE_GEMINI_API_KEY_X variables`);
+        return fallbackKeys;
+    }
+    
+    console.error('❌ No Gemini API keys found! Please add VITE_GEMINI_API_KEY_1 through VITE_GEMINI_API_KEY_5');
+    return [];
 };
 
 // List of API keys to try in order
