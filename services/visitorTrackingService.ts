@@ -1,5 +1,5 @@
-// Visitor Tracking Service
-// Automatically tracks website visitors for admin analytics
+// Enhanced Visitor Tracking Service
+// Production-ready visitor analytics for admin dashboard
 
 import { databaseService } from './databaseService';
 
@@ -14,12 +14,22 @@ interface VisitorInfo {
   userId?: string;
 }
 
+interface TrackingStatus {
+  isEnabled: boolean;
+  sessionId: string;
+  totalTracked: number;
+  lastError?: string;
+}
+
 class VisitorTrackingService {
   private sessionId: string;
-  private hasTrackedThisSession: boolean = false;
+  private isEnabled: boolean = true;
+  private trackingCount: number = 0;
+  private lastError?: string;
 
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
+    this.trackingCount = parseInt(sessionStorage.getItem('salesflow_tracking_count') || '0');
   }
 
   /**
@@ -94,15 +104,14 @@ class VisitorTrackingService {
   }
 
   /**
-   * Track a page visit
+   * Track a page visit (production version)
    */
-  async trackPageVisit(userId?: string): Promise<void> {
-    try {
-      // Only track once per session to avoid spam
-      if (this.hasTrackedThisSession) {
-        return;
-      }
+  async trackPageVisit(userId?: string): Promise<boolean> {
+    if (!this.isEnabled) {
+      return false;
+    }
 
+    try {
       const visitorInfo: VisitorInfo = {
         sessionId: this.sessionId,
         pageUrl: window.location.href,
@@ -125,32 +134,30 @@ class VisitorTrackingService {
         userId: visitorInfo.userId,
       });
 
-      this.hasTrackedThisSession = true;
+      this.trackingCount++;
+      sessionStorage.setItem('salesflow_tracking_count', this.trackingCount.toString());
+      this.lastError = undefined;
       
-      console.log('✅ Visitor tracked:', {
-        sessionId: this.sessionId,
-        deviceType: visitorInfo.deviceType,
-        browser: visitorInfo.browser,
-        userId: userId || 'anonymous'
-      });
+      return true;
     } catch (error) {
-      console.error('❌ Failed to track visitor:', error);
-      // Don't throw error to avoid breaking the app
+      this.lastError = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Visitor tracking failed:', this.lastError);
+      
+      // Disable tracking if database table doesn't exist
+      if (this.lastError.includes('relation "visitor_analytics" does not exist')) {
+        this.isEnabled = false;
+        console.warn('🚨 Visitor tracking disabled: Database table not found. Run the SQL migration first.');
+      }
+      
+      return false;
     }
   }
 
   /**
    * Update visitor with user ID when user logs in
    */
-  async updateVisitorWithUserId(userId: string): Promise<void> {
-    try {
-      // Track again with user ID if we haven't tracked yet
-      if (!this.hasTrackedThisSession) {
-        await this.trackPageVisit(userId);
-      }
-    } catch (error) {
-      console.error('❌ Failed to update visitor with user ID:', error);
-    }
+  async updateVisitorWithUserId(userId: string): Promise<boolean> {
+    return await this.trackPageVisit(userId);
   }
 
   /**
@@ -161,12 +168,51 @@ class VisitorTrackingService {
   }
 
   /**
-   * Reset tracking for new session (useful for testing)
+   * Get tracking status for admin dashboard
+   */
+  getTrackingStatus(): TrackingStatus {
+    return {
+      isEnabled: this.isEnabled,
+      sessionId: this.sessionId,
+      totalTracked: this.trackingCount,
+      lastError: this.lastError
+    };
+  }
+
+  /**
+   * Enable/disable tracking
+   */
+  setEnabled(enabled: boolean): void {
+    this.isEnabled = enabled;
+  }
+
+  /**
+   * Reset tracking for new session
    */
   resetSession(): void {
     sessionStorage.removeItem('salesflow_visitor_session');
+    sessionStorage.removeItem('salesflow_tracking_count');
     this.sessionId = this.getOrCreateSessionId();
-    this.hasTrackedThisSession = false;
+    this.trackingCount = 0;
+    this.lastError = undefined;
+  }
+
+  /**
+   * Test tracking functionality
+   */
+  async testTracking(): Promise<{ success: boolean; message: string }> {
+    try {
+      const result = await this.trackPageVisit();
+      return {
+        success: result,
+        message: result ? 'Tracking is working correctly' : 'Tracking failed - check console for errors'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Tracking test failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
   }
 }
 
