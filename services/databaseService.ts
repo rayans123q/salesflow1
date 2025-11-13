@@ -606,23 +606,12 @@ export const databaseService = {
     
     return {
       totalUsers: data.total_users || 0,
-      usersToday: data.users_today || 0,
-      usersThisWeek: data.users_this_week || 0,
-      usersThisMonth: data.users_this_month || 0,
-      verifiedUsers: data.verified_users || 0,
+      newUsersToday: data.new_users_today || 0,
       activeSubscriptions: data.active_subscriptions || 0,
-      expiredSubscriptions: data.expired_subscriptions || 0,
-      cancelledSubscriptions: data.cancelled_subscriptions || 0,
-      totalCampaigns: data.total_campaigns || 0,
-      campaignsToday: data.campaigns_today || 0,
+      totalVisitors: data.total_visitors || 0,
+      visitorsToday: data.visitors_today || 0,
       totalPosts: data.total_posts || 0,
-      postsToday: data.posts_today || 0,
-      totalVisits: data.total_visits || 0,
-      visitsToday: data.visits_today || 0,
-      visitsThisWeek: data.visits_this_week || 0,
-      visitsThisMonth: data.visits_this_month || 0,
-      uniqueVisitorsToday: data.unique_visitors_today || 0,
-      estimatedMonthlyRevenue: data.estimated_monthly_revenue || 0,
+
     };
   },
 
