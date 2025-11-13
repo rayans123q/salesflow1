@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/admin",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "functions": {
+    "app/api/reddit-oauth.js": {
+      "runtime": "nodejs18.x"
+    },
+    "app/api/whop-webhook.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
