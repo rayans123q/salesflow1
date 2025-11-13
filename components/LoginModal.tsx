@@ -48,31 +48,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 if (data.user) {
                     // Check if email confirmation is required
                     if (data.user.email_confirmed_at) {
-                        // User is immediately confirmed - redirect to Whop payment
-                        console.log('✅ Sign-up successful, redirecting to payment...');
-                        
-                        // Create user in database first
-                        try {
-                            await supabase.from('users').insert([{
-                                id: data.user.id,
-                                name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                                email: data.user.email,
-                            }]);
-                        } catch (dbError) {
-                            console.warn('User creation in DB failed, continuing to payment:', dbError);
-                        }
-                        
-                        // Redirect to Whop payment
-                        const whopPlanId = import.meta.env.VITE_WHOP_PLAN_ID;
-                        const whopCompanyId = import.meta.env.VITE_WHOP_COMPANY_ID;
-                        
-                        if (whopPlanId && whopCompanyId) {
-                            const checkoutUrl = `https://whop.com/checkout/${whopPlanId}?email=${encodeURIComponent(data.user.email!)}&name=${encodeURIComponent(data.user.user_metadata?.name || '')}`;
-                            window.location.href = checkoutUrl;
-                        } else {
-                            setError('Payment system not configured. Please contact support.');
-                            setLoading(false);
-                        }
+                        // User is immediately confirmed - just log them in
+                        const userData = {
+                            id: data.user.id,
+                            email: data.user.email!,
+                            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                        };
+                        onLogin(userData);
+                        setLoading(false);
                     } else {
                         // Email confirmation required
                         setMessage('Please check your email to confirm your account before signing in.');
@@ -94,43 +77,68 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 }
 
                 if (data.user) {
-                    // Get user data from our users table
-                    const { data: userData, error: userError } = await supabase
-                        .from('users')
-                        .select('id, name, email')
-                        .eq('id', data.user.id)
-                        .single();
-
-                    if (userError && userError.code !== 'PGRST116') {
-                        // User doesn't exist in our table yet, create it
-                        const { data: newUser, error: createError } = await supabase
+                    // Try to get user data from our users table
+                    try {
+                        const { data: userData, error: userError } = await supabase
                             .from('users')
-                            .insert([{
-                                id: data.user.id,
-                                name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                                email: data.user.email,
-                            }])
-                            .select()
+                            .select('id, name, email')
+                            .eq('id', data.user.id)
                             .single();
 
-                        if (createError) {
-                            setError('Failed to create user profile. Please try again.');
-                            setLoading(false);
-                            return;
-                        }
+                        if (userError && userError.code === 'PGRST116') {
+                            // User doesn't exist in our table yet, create it
+                            try {
+                                const { data: newUser, error: createError } = await supabase
+                                    .from('users')
+                                    .insert([{
+                                        id: data.user.id,
+                                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                                        email: data.user.email,
+                                    }])
+                                    .select()
+                                    .single();
 
-                        onLogin({
-                            id: newUser.id,
-                            email: newUser.email,
-                            name: newUser.name,
-                        });
-                    } else if (userData) {
-                        onLogin({
-                            id: userData.id,
-                            email: userData.email || data.user.email!,
-                            name: userData.name,
-                        });
-                    } else {
+                                if (createError) {
+                                    console.error('Failed to create user in DB:', createError);
+                                    // Still log them in with auth data
+                                    onLogin({
+                                        id: data.user.id,
+                                        email: data.user.email!,
+                                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                                    });
+                                } else {
+                                    onLogin({
+                                        id: newUser.id,
+                                        email: newUser.email,
+                                        name: newUser.name,
+                                    });
+                                }
+                            } catch (createErr) {
+                                console.error('Error creating user:', createErr);
+                                // Still log them in with auth data
+                                onLogin({
+                                    id: data.user.id,
+                                    email: data.user.email!,
+                                    name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                                });
+                            }
+                        } else if (userData) {
+                            onLogin({
+                                id: userData.id,
+                                email: userData.email || data.user.email!,
+                                name: userData.name,
+                            });
+                        } else {
+                            // Fallback to auth data
+                            onLogin({
+                                id: data.user.id,
+                                email: data.user.email!,
+                                name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error fetching user data:', err);
+                        // Fallback to auth data
                         onLogin({
                             id: data.user.id,
                             email: data.user.email!,
