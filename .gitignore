@@ -25,3 +25,8 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Environment variable files with secrets
+NETLIFY_ENV_IMPORT.txt
+DEPLOY_NOW.md
+FRESH_NETLIFY_DEPLOY.md
