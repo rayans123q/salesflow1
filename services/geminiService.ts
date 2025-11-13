@@ -725,10 +725,13 @@ const findRedditPostsInternal = async (
     redditCreds: RedditCredentials | null,
     userHasSubscription: boolean = false
 ): Promise<any[]> => {
+    // TEMPORARY FIX: Skip Reddit API due to OAuth errors - go directly to Gemini
+    console.log("🚀 HOTFIX: Skipping Reddit API (OAuth errors) - using Gemini Search directly");
+    
     // Get the appropriate Reddit credentials (company API if subscribed, user's own if not)
     const effectiveCreds = getRedditCredentials(userHasSubscription, redditCreds);
     
-    if (effectiveCreds?.clientId) {
+    if (false && effectiveCreds?.clientId) {
         try {
             const apiSource = userHasSubscription ? 'Company Reddit API' : 'User Reddit API';
             console.log(`🔴 Using ${apiSource} for real-time data...`);
