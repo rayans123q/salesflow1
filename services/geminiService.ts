@@ -931,6 +931,43 @@ const findDiscordMessagesInternal = async (
     }
 };
 
+const findTwitterPostsInternal = async (
+    campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>
+): Promise<any[]> => {
+    console.log("🐦 Searching Twitter for leads...");
+    
+    try {
+        // Build search query from keywords
+        const searchQuery = campaign.keywords.join(' OR ');
+        
+        // Search Twitter using the Twitter service
+        const tweets = await twitterService.searchTweets(searchQuery, 10);
+        
+        if (tweets.length === 0) {
+            console.log('📭 No tweets found');
+            return [];
+        }
+        
+        // Transform Twitter results to our Post format
+        const results = tweets.map(tweet => ({
+            postUrl: tweet.postUrl,
+            subreddit: 'twitter', // Using subreddit field for source
+            title: tweet.title,
+            content: tweet.content,
+            author: tweet.author,
+            relevance: tweet.score,
+            contacted: false,
+        }));
+        
+        console.log(`✅ Found ${results.length} relevant tweets`);
+        return results;
+        
+    } catch (error) {
+        console.error("❌ Twitter search failed:", error);
+        return [];
+    }
+};
+
 
 export const findLeads = async (
     campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>,
@@ -957,6 +994,14 @@ export const findLeads = async (
             findDiscordMessagesInternal(campaign)
                 .then(messages => processResults(messages, 'discord'))
                 .catch(err => { console.error("Error finding Discord messages:", err); return []; })
+        );
+    }
+
+    if (campaign.leadSources.includes('twitter')) {
+        promises.push(
+            findTwitterPostsInternal(campaign)
+                .then(tweets => processResults(tweets, 'twitter'))
+                .catch(err => { console.error("Error finding Twitter posts:", err); return []; })
         );
     }
     
