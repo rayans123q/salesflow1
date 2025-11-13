@@ -218,3 +218,12 @@ class VisitorTrackingService {
 
 // Export singleton instance
 export const visitorTrackingService = new VisitorTrackingService();
+
+// Expose to window for testing (development only)
+if (typeof window !== 'undefined') {
+  (window as any).visitorTrackingService = visitorTrackingService;
+  (window as any).testVisitorTracking = () => {
+    console.log('🧪 Testing visitor tracking...');
+    return visitorTrackingService.testTracking();
+  };
+}
