@@ -7,7 +7,7 @@ import CampaignCreator from './components/CampaignCreator';
 import FindingLeads from './components/FindingLeads';
 import CampaignPosts from './components/CampaignPosts';
 import Settings from './components/Settings';
-import AdminPanel from './components/AdminPanel';
+import AdminDashboard from './components/AdminDashboard';
 import Notification from './components/Notification';
 import { findLeads } from './services/geminiService';
 import LandingPage from './components/LandingPage';
@@ -691,7 +691,7 @@ const App: React.FC = () => {
                 return null;
             case 'ADMIN':
                 if (user?.role === 'admin') {
-                    return <AdminPanel />;
+                    return <AdminDashboard />;
                 }
                 setPage('DASHBOARD');
                 return null;
