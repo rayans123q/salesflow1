@@ -1,0 +1,10 @@
+[33mef002a3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add feature summary for Reddit unlimited access implementation
+[33m3722b6e[m Add comprehensive guide for Reddit unlimited access setup
+[33m84cd922[m Add unlimited Reddit access with OAuth credentials - users can now add their own Reddit OAuth credentials for unlimited API access
+[33m97d3ced[m Replace Whop dashboard buttons with support contact
+[33me0dbda5[m Add animated testimonial cards with 3D flip effect
+[33mb9a3030[m Add Google verification file
+[33m96d5059[m Add sitemap and robots.txt for SEO
+[33m11c840a[m Fix Supabase env vars
+[33m533f166[m Fix CSS 404 error
+[33mef60ace[m Production ready with Netlify Functions

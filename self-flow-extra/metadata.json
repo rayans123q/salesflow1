@@ -1,0 +1,7 @@
+{
+  "name": "self-flow extra",
+  "description": "self-flow extra: An AI-powered tool that uses Google Search to find companies based on a specific software component or service, then scrapes their contact information.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
