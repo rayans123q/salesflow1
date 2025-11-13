@@ -169,24 +169,42 @@ CREATE POLICY "System can insert notifications" ON admin_notifications
 -- Function to update user total_posts count
 CREATE OR REPLACE FUNCTION update_user_total_posts()
 RETURNS TRIGGER AS $$
+DECLARE
+    affected_user_id UUID;
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        UPDATE users 
-        SET total_posts = (
-            SELECT COUNT(*) 
-            FROM posts 
-            WHERE user_id = NEW.user_id
-        )
-        WHERE id = NEW.user_id;
+        -- Get user_id from campaign
+        SELECT user_id INTO affected_user_id
+        FROM campaigns
+        WHERE id = NEW.campaign_id;
+        
+        IF affected_user_id IS NOT NULL THEN
+            UPDATE users 
+            SET total_posts = (
+                SELECT COUNT(*) 
+                FROM posts p
+                JOIN campaigns c ON p.campaign_id = c.id
+                WHERE c.user_id = affected_user_id
+            )
+            WHERE id = affected_user_id;
+        END IF;
         RETURN NEW;
     ELSIF TG_OP = 'DELETE' THEN
-        UPDATE users 
-        SET total_posts = (
-            SELECT COUNT(*) 
-            FROM posts 
-            WHERE user_id = OLD.user_id
-        )
-        WHERE id = OLD.user_id;
+        -- Get user_id from campaign
+        SELECT user_id INTO affected_user_id
+        FROM campaigns
+        WHERE id = OLD.campaign_id;
+        
+        IF affected_user_id IS NOT NULL THEN
+            UPDATE users 
+            SET total_posts = (
+                SELECT COUNT(*) 
+                FROM posts p
+                JOIN campaigns c ON p.campaign_id = c.id
+                WHERE c.user_id = affected_user_id
+            )
+            WHERE id = affected_user_id;
+        END IF;
         RETURN OLD;
     END IF;
     RETURN NULL;
@@ -308,8 +326,9 @@ SELECT
 UPDATE users 
 SET total_posts = (
     SELECT COUNT(*) 
-    FROM posts 
-    WHERE posts.user_id = users.id
+    FROM posts p
+    JOIN campaigns c ON p.campaign_id = c.id
+    WHERE c.user_id = users.id
 );
 
 -- ============================================================================
