@@ -104,9 +104,14 @@ const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                     <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-200 mb-10 drop-shadow-md">
                         Sales Flow scans Reddit and Discord for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
                     </p>
-                    <button onClick={handleGetStarted} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
-                        Get Started - $9/month
-                    </button>
+                    <div className="flex flex-col items-center gap-4">
+                        <button onClick={handleGetStarted} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
+                            Get Started - $9/month
+                        </button>
+                        <button onClick={onLogin} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] text-white font-semibold px-8 py-3 rounded-lg hover:bg-black/20 dark:hover:bg-white/10 transition-colors">
+                            Already have an account? Login
+                        </button>
+                    </div>
                 </AnimatedSection>
             </div>
         </section>
