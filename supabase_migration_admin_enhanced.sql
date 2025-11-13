@@ -279,10 +279,10 @@ SELECT
     (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as users_this_month,
     (SELECT COUNT(*) FROM users WHERE is_verified = true) as verified_users,
     
-    -- Subscription stats
-    (SELECT COUNT(*) FROM users WHERE subscription_status = 'active') as active_subscriptions,
-    (SELECT COUNT(*) FROM users WHERE subscription_status = 'expired') as expired_subscriptions,
-    (SELECT COUNT(*) FROM users WHERE subscription_status = 'cancelled') as cancelled_subscriptions,
+    -- Subscription stats (from user_settings table)
+    (SELECT COUNT(*) FROM user_settings WHERE subscription_status = 'active') as active_subscriptions,
+    (SELECT COUNT(*) FROM user_settings WHERE subscription_status = 'expired') as expired_subscriptions,
+    (SELECT COUNT(*) FROM user_settings WHERE subscription_status = 'cancelled') as cancelled_subscriptions,
     
     -- Campaign and post stats
     (SELECT COUNT(*) FROM campaigns) as total_campaigns,
@@ -298,7 +298,7 @@ SELECT
     (SELECT COUNT(DISTINCT visitor_ip) FROM visitor_analytics WHERE created_at >= CURRENT_DATE) as unique_visitors_today,
     
     -- Revenue estimation (assuming $9/month per active subscription)
-    (SELECT COUNT(*) FROM users WHERE subscription_status = 'active') * 9 as estimated_monthly_revenue;
+    (SELECT COUNT(*) FROM user_settings WHERE subscription_status = 'active') * 9 as estimated_monthly_revenue;
 
 -- ============================================================================
 -- SECTION 8: INITIAL DATA POPULATION (OPTIONAL)
