@@ -243,21 +243,21 @@ const AdminDashboard: React.FC<{ user: User }> = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl">
               <p className="text-white/80 text-sm">Total Users</p>
-              <p className="text-white text-3xl font-bold mt-1">{stats.totalUsers}</p>
-              <p className="text-white/70 text-xs mt-1">+{stats.newUsersToday} today</p>
+              <p className="text-white text-3xl font-bold mt-1">{stats.totalUsers || 0}</p>
+              <p className="text-white/70 text-xs mt-1">+{stats.newUsersToday || 0} today</p>
             </div>
             <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-xl">
               <p className="text-white/80 text-sm">Active Subscriptions</p>
-              <p className="text-white text-3xl font-bold mt-1">{stats.activeSubscriptions}</p>
+              <p className="text-white text-3xl font-bold mt-1">{stats.activeSubscriptions || 0}</p>
             </div>
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-xl">
               <p className="text-white/80 text-sm">Total Visitors</p>
-              <p className="text-white text-3xl font-bold mt-1">{stats.totalVisitors}</p>
-              <p className="text-white/70 text-xs mt-1">{stats.visitorsToday} today</p>
+              <p className="text-white text-3xl font-bold mt-1">{stats.totalVisitors || 0}</p>
+              <p className="text-white/70 text-xs mt-1">{stats.visitorsToday || 0} today</p>
             </div>
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-xl">
               <p className="text-white/80 text-sm">Total Posts</p>
-              <p className="text-white text-3xl font-bold mt-1">{stats.totalPosts}</p>
+              <p className="text-white text-3xl font-bold mt-1">{stats.totalPosts || 0}</p>
             </div>
           </div>
         )}
