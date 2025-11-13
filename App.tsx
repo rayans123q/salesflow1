@@ -18,6 +18,7 @@ import PaymentGate from './components/PaymentGate';
 import { databaseService } from './services/databaseService';
 import { supabase } from './services/supabaseClient';
 import { whopService } from './services/whopService';
+import { visitorTrackingService } from './services/visitorTrackingService';
 
 // Keep theme in localStorage for immediate access before user loads
 const THEME_STORAGE_KEY = 'salesflow_theme';
@@ -202,6 +203,19 @@ const App: React.FC = () => {
 
         loadUserData();
     }, [user?.id, showNotification]);
+
+    // Track visitor analytics
+    useEffect(() => {
+        const trackVisitor = async () => {
+            try {
+                await visitorTrackingService.trackPageVisit(user?.id);
+            } catch (error) {
+                console.error('Failed to track visitor:', error);
+            }
+        };
+
+        trackVisitor();
+    }, [user?.id]);
 
     // Update usage when campaigns change
     useEffect(() => {
