@@ -590,5 +590,231 @@ export const databaseService = {
       if (error) throw error;
     }
   },
+
+  // ============================================================================
+  // ADMIN PANEL OPERATIONS
+  // ============================================================================
+
+  // Admin statistics
+  async getAdminStats() {
+    const { data, error } = await supabase
+      .from('admin_dashboard_stats')
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    
+    return {
+      totalUsers: data.total_users || 0,
+      usersToday: data.users_today || 0,
+      usersThisWeek: data.users_this_week || 0,
+      usersThisMonth: data.users_this_month || 0,
+      verifiedUsers: data.verified_users || 0,
+      activeSubscriptions: data.active_subscriptions || 0,
+      expiredSubscriptions: data.expired_subscriptions || 0,
+      cancelledSubscriptions: data.cancelled_subscriptions || 0,
+      totalCampaigns: data.total_campaigns || 0,
+      campaignsToday: data.campaigns_today || 0,
+      totalPosts: data.total_posts || 0,
+      postsToday: data.posts_today || 0,
+      totalVisits: data.total_visits || 0,
+      visitsToday: data.visits_today || 0,
+      visitsThisWeek: data.visits_this_week || 0,
+      visitsThisMonth: data.visits_this_month || 0,
+      uniqueVisitorsToday: data.unique_visitors_today || 0,
+      estimatedMonthlyRevenue: data.estimated_monthly_revenue || 0,
+    };
+  },
+
+  // User management with details
+  async getAllUsersWithDetails() {
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        *,
+        campaigns:campaigns(count)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return (data || []).map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email || undefined,
+      createdAt: user.created_at,
+      lastLogin: user.last_login || undefined,
+      isVerified: user.is_verified || false,
+      totalPosts: user.total_posts || 0,
+      subscriptionStatus: user.subscription_status || 'inactive',
+      subscriptionPlan: user.subscription_plan || 'free',
+      campaignCount: user.campaigns?.[0]?.count || 0,
+      role: user.role || 'user',
+    }));
+  },
+
+  // Verify user
+  async verifyUser(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({ is_verified: true })
+      .eq('id', userId);
+
+    if (error) throw error;
+  },
+
+  // Delete user
+  async deleteUser(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
+  },
+
+  // Update user subscription (admin version)
+  async updateUserSubscriptionAdmin(userId: string, plan: string, status: string): Promise<void> {
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ 
+        subscription_plan: plan,
+        subscription_status: status 
+      })
+      .eq('id', userId);
+
+    if (userError) throw userError;
+
+    // Also update user_settings if exists
+    const { data: existing } = await supabase
+      .from('user_settings')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    const updateData = {
+      subscription_plan: plan,
+      subscription_status: status,
+      reddit_api_subscribed: status === 'active',
+      subscription_started_at: status === 'active' ? new Date().toISOString() : null,
+    };
+
+    if (existing) {
+      const { error } = await supabase
+        .from('user_settings')
+        .update(updateData)
+        .eq('user_id', userId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('user_settings')
+        .insert([{ user_id: userId, ...updateData }]);
+      if (error) throw error;
+    }
+  },
+
+  // Admin activity logging
+  async logAdminAction(
+    adminUserId: string, 
+    actionType: string, 
+    targetUserId?: string, 
+    actionDetails?: any
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('admin_logs')
+      .insert({
+        admin_user_id: adminUserId,
+        action_type: actionType,
+        target_user_id: targetUserId,
+        action_details: actionDetails || {},
+      });
+
+    if (error) throw error;
+  },
+
+  // Get admin logs
+  async getAdminLogs() {
+    const { data, error } = await supabase
+      .from('admin_logs')
+      .select(`
+        *,
+        admin_user:users!admin_logs_admin_user_id_fkey(name),
+        target_user:users!admin_logs_target_user_id_fkey(name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+    
+    return (data || []).map(log => ({
+      id: log.id,
+      adminUserId: log.admin_user_id,
+      actionType: log.action_type,
+      targetUserId: log.target_user_id,
+      actionDetails: log.action_details,
+      createdAt: log.created_at,
+      adminName: log.admin_user?.name,
+      targetUserName: log.target_user?.name,
+    }));
+  },
+
+  // Get admin notifications
+  async getAdminNotifications() {
+    const { data, error } = await supabase
+      .from('admin_notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    
+    return (data || []).map(notification => ({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      isRead: notification.is_read,
+      createdAt: notification.created_at,
+    }));
+  },
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('admin_notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+  },
+
+  // Track visitor
+  async trackVisitor(visitorData: {
+    visitorIp?: string;
+    userAgent?: string;
+    pageUrl: string;
+    referrer?: string;
+    sessionId: string;
+    userId?: string;
+    deviceType?: string;
+    browser?: string;
+    os?: string;
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('visitor_analytics')
+      .insert({
+        visitor_ip: visitorData.visitorIp,
+        user_agent: visitorData.userAgent,
+        page_url: visitorData.pageUrl,
+        referrer: visitorData.referrer,
+        session_id: visitorData.sessionId,
+        user_id: visitorData.userId,
+        device_type: visitorData.deviceType,
+        browser: visitorData.browser,
+        os: visitorData.os,
+      });
+
+    if (error) throw error;
+  },
 };
 
