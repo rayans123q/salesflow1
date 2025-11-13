@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AIStyleSettings, Campaign, Post, RedditCredentials, LeadSource } from '../types';
 import apiKeyManager from './apiKeyManager';
 import { redditOAuthService } from './redditOAuthService';
+import { twitterService } from './twitterService';
 
 // Initialize Gemini AI client with first available API key
 let currentApiKey = apiKeyManager.getNextApiKey();
