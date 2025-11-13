@@ -14,6 +14,7 @@
 
 
 
+
 - [ ] 2. Extend database service with admin methods
   - Implement getAdminStats() method to fetch dashboard statistics
   - Implement getAllUsersWithDetails() method with campaign count joins
