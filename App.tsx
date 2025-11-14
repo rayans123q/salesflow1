@@ -9,6 +9,7 @@ import CampaignPosts from './components/CampaignPosts';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
 import Notification from './components/Notification';
+import SubscriptionBanner from './components/SubscriptionBanner';
 import { findLeads } from './services/geminiService';
 import LandingPage from './components/LandingPage';
 import LoginModal from './components/LoginModal';
@@ -44,6 +45,7 @@ const App: React.FC = () => {
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [hasSubscription, setHasSubscription] = useState(false);
     const [showPaymentGate, setShowPaymentGate] = useState(false);
+    const [showSubscriptionBanner, setShowSubscriptionBanner] = useState(true);
 
     const [theme, setTheme] = useState<Theme>(() => {
         return (localStorage.getItem(THEME_STORAGE_KEY) as Theme) || 'dark';
@@ -130,7 +132,19 @@ const App: React.FC = () => {
                 
                 // Set user state immediately (non-blocking)
                 setUser(newUser);
-                setHasSubscription(true);
+                
+                // Check subscription status in background (non-blocking)
+                (async () => {
+                    try {
+                        const hasActive = await whopService.hasActiveSubscription(newUser.email!);
+                        setHasSubscription(hasActive);
+                        console.log('💳 Subscription check:', hasActive ? 'ACTIVE' : 'INACTIVE');
+                    } catch (error) {
+                        console.error('Failed to check subscription:', error);
+                        setHasSubscription(false);
+                    }
+                })();
+                
                 setShowPaymentGate(false);
                 
                 // Ensure user exists in database (background, non-blocking)
@@ -791,6 +805,17 @@ const App: React.FC = () => {
             {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
             <Sidebar currentPage={page} setPage={setPage} usage={usage} limits={limits} user={user} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+                {/* Subscription Banner - Show when user doesn't have subscription */}
+                {!hasSubscription && showSubscriptionBanner && user && (
+                    <SubscriptionBanner
+                        onUpgrade={() => {
+                            if (user.email) {
+                                whopService.redirectToCheckout(user.email);
+                            }
+                        }}
+                        onDismiss={() => setShowSubscriptionBanner(false)}
+                    />
+                )}
                 <Notification notification={notification} onClose={() => setNotification(null)} />
                  <ConfirmationModal
                     isOpen={isClearDataModalOpen}
