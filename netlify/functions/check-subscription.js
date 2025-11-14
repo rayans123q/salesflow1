@@ -24,8 +24,40 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // No whitelist - check Whop API directly for all users
+    // First check our subscribed_users table (manual activations from thank you page)
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY
+    );
 
+    const { data: subscribedUser, error: dbError } = await supabase
+      .from('subscribed_users')
+      .select('*')
+      .eq('email', userEmail.toLowerCase())
+      .eq('status', 'active')
+      .single();
+
+    if (subscribedUser) {
+      console.log('✅ Found active subscription in database:', userEmail);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          hasActiveSubscription: true,
+          subscriptionStatus: 'active',
+          source: 'database',
+          membership: {
+            id: subscribedUser.id,
+            status: 'active',
+            valid: true,
+            expires_at: null
+          }
+        })
+      };
+    }
+
+    // If not in database, check Whop API
     const whopApiKey = process.env.VITE_WHOP_API_KEY;
     const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
 

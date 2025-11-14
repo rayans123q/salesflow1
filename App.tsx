@@ -16,6 +16,7 @@ import LoginModal from './components/LoginModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import OnboardingTour from './components/OnboardingTour';
 import PaymentGate from './components/PaymentGate';
+import ThankYouPage from './components/ThankYouPage';
 import { databaseService } from './services/databaseService';
 import { supabase } from './services/supabaseClient';
 import { whopService } from './services/whopService';
@@ -252,7 +253,7 @@ const App: React.FC = () => {
         };
     }, []);
 
-    // Handle URL-based routing for /admin path
+    // Handle URL-based routing for /admin and /thank-you paths
     useEffect(() => {
         const handleUrlChange = () => {
             const currentPath = window.location.pathname;
@@ -274,6 +275,11 @@ const App: React.FC = () => {
         window.addEventListener('popstate', handleUrlChange);
         return () => window.removeEventListener('popstate', handleUrlChange);
     }, [user?.role, isLoggedIn]);
+
+    // Show Thank You page if on /thank-you route
+    if (window.location.pathname.includes('/thank-you')) {
+        return <ThankYouPage />;
+    }
 
     // Sync page state to URL
     useEffect(() => {
