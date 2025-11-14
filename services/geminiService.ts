@@ -899,19 +899,21 @@ const findTwitterPostsInternal = async (
     const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
     const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
     
-    const prompt = `You are a lead generation expert. Search Twitter/X for recent tweets where people are discussing problems related to: ${campaign.description}
+    const prompt = `You are a lead generation expert. Search Twitter/X ONLY (NOT Reddit) for recent tweets where people are discussing problems related to: ${campaign.description}
 
 **SEARCH TASK:**
 Use Google Search with "site:twitter.com" OR "site:x.com" to find tweets about: ${keywordsQuery}
 Timeframe: ${dateQuery}
 
 **CRITICAL REQUIREMENTS:**
-1. Each tweet URL MUST be a real, direct link to a specific tweet (format: https://twitter.com/username/status/1234567890)
-2. VERIFY the URL exists and is accessible before including it
-3. The content MUST be the actual tweet text, not a summary
-4. Only include tweets where someone is asking for help, describing a problem, or looking for solutions
-5. Score 90-100: Explicitly asking for a tool/solution. Score 70-89: Describing a clear problem
-6. EXCLUDE: promotional tweets, spam, irrelevant content, or tweets with score below 70
+1. ONLY TWITTER/X URLS - Each URL MUST start with "https://twitter.com/" or "https://x.com/"
+2. DO NOT include Reddit URLs (reddit.com) - we only want Twitter/X posts
+3. Format: https://twitter.com/username/status/1234567890 or https://x.com/username/status/1234567890
+4. VERIFY the URL exists and is accessible before including it
+5. The content MUST be the actual tweet text, not a summary
+6. Only include tweets where someone is asking for help, describing a problem, or looking for solutions
+7. Score 90-100: Explicitly asking for a tool/solution. Score 70-89: Describing a clear problem
+8. EXCLUDE: promotional tweets, spam, irrelevant content, Reddit posts, or tweets with score below 70
 
 **OUTPUT FORMAT (JSON only):**
 \`\`\`json
@@ -928,7 +930,11 @@ Timeframe: ${dateQuery}
 
 If no relevant tweets found, return empty array: \`[]\`
 
-IMPORTANT: Only return tweets with REAL, VERIFIED URLs. Do not make up or guess URLs.`;
+IMPORTANT: 
+- Only return TWITTER/X URLs (twitter.com or x.com)
+- DO NOT return Reddit URLs (reddit.com)
+- Only return tweets with REAL, VERIFIED URLs
+- Do not make up or guess URLs`;
     
     try {
         let geminiResponse;
