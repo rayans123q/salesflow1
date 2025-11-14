@@ -24,31 +24,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // TEMPORARY: Whitelist for verified paid users while debugging Whop API
-    const verifiedPaidUsers = [
-      'dateflow4@gmail.com',   // Paid user confirmed in Whop dashboard
-      'rwenzo053@gmail.com',   // Testing account
-      'rwenzo112@gmail.com'    // Paid user
-    ];
-
-    if (verifiedPaidUsers.includes(userEmail.toLowerCase())) {
-      console.log('✅ Verified paid user (whitelist):', userEmail);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          hasActiveSubscription: true,
-          subscriptionStatus: 'active',
-          source: 'whitelist',
-          membership: {
-            id: 'verified',
-            status: 'active',
-            valid: true,
-            expires_at: null
-          }
-        })
-      };
-    }
+    // No whitelist - check Whop API directly for all users
 
     const whopApiKey = process.env.VITE_WHOP_API_KEY;
     const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
@@ -68,31 +44,14 @@ exports.handler = async (event, context) => {
     console.log('🔍 Checking subscription via Whop API for:', userEmail);
 
     // Check user's membership status via Whop API
-    // Try multiple endpoints to find the user
-    let response;
-    let apiVersion = 'v5';
-    
-    // Try v5 first
-    response = await fetch(`https://api.whop.com/api/v5/memberships`, {
+    // Fetch all memberships and filter by email
+    const response = await fetch(`https://api.whop.com/api/v5/memberships?per=100`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${whopApiKey}`,
         'Content-Type': 'application/json',
       },
     });
-    
-    // If v5 fails, try v2
-    if (!response.ok) {
-      console.log('⚠️ v5 failed, trying v2...');
-      apiVersion = 'v2';
-      response = await fetch(`https://api.whop.com/api/v2/memberships`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${whopApiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -123,35 +82,37 @@ exports.handler = async (event, context) => {
     }
 
     const data = await response.json();
-    console.log(`📦 Whop API ${apiVersion} response:`, JSON.stringify(data, null, 2));
+    console.log(`📦 Whop API response - Total memberships:`, data.data?.length || 0);
     
     // Find active membership for this user
-    const memberships = data.data || data.memberships || [];
-    console.log(`📊 Found ${memberships.length} total memberships`);
+    const memberships = data.data || [];
     
     const activeMembership = memberships.find(membership => {
       // Check if email matches (case insensitive)
-      const emailMatch = membership.email?.toLowerCase() === userEmail.toLowerCase() ||
-                        membership.user?.email?.toLowerCase() === userEmail.toLowerCase();
+      const memberEmail = membership.email || membership.user?.email || '';
+      const emailMatch = memberEmail.toLowerCase() === userEmail.toLowerCase();
       
+      // Check if membership is active
       const isActive = membership.status === 'active' || membership.status === 'trialing';
       const notCancelled = !membership.cancel_at_period_end;
       const isValid = membership.valid !== false;
       
-      console.log(`🔍 Checking membership ${membership.id}:`, {
-        email: membership.email || membership.user?.email,
-        emailMatch,
-        status: membership.status,
-        isActive,
-        notCancelled,
-        isValid
-      });
+      if (emailMatch) {
+        console.log(`🔍 Found membership for ${userEmail}:`, {
+          id: membership.id,
+          status: membership.status,
+          isActive,
+          notCancelled,
+          isValid,
+          product: membership.product?.name || 'Unknown'
+        });
+      }
       
       return emailMatch && isActive && notCancelled && isValid;
     });
 
     if (activeMembership) {
-      console.log('✅ Active subscription found:', activeMembership.id);
+      console.log('✅ Active subscription found for:', userEmail);
     } else {
       console.log('❌ No active subscription found for:', userEmail);
     }
