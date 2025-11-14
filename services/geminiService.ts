@@ -19,15 +19,19 @@ const getAiClient = () => {
 // Function to handle API errors and switch to next key
 const handleApiError = (error: any): boolean => {
     const errorMessage = error?.message || error?.toString() || '';
+    const errorStatus = error?.status || '';
     
-    // Check if it's an API key related error
+    // Check if it's an API key related error or rate limit (429)
     if (errorMessage.includes('API key') || 
         errorMessage.includes('401') || 
         errorMessage.includes('403') ||
+        errorMessage.includes('429') ||
         errorMessage.includes('quota') ||
+        errorMessage.includes('RESOURCE_EXHAUSTED') ||
+        errorStatus === 'RESOURCE_EXHAUSTED' ||
         errorMessage.includes('permission')) {
         
-        console.warn('❌ Current API key failed, trying next one...');
+        console.warn('❌ Current API key failed (rate limit or auth issue), trying next one...');
         apiKeyManager.markKeyAsFailed(currentApiKey);
         
         // Get next key and reinitialize
@@ -777,7 +781,19 @@ const findRedditPostsInternal = async (
               ${JSON.stringify(postsForAnalysis)}
               If no posts are relevant, return an empty array: \`[]\`.`;
 
-            const geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+            let geminiResponse;
+            try {
+                geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+            } catch (aiError) {
+                // If API key failed, try with next key
+                if (handleApiError(aiError)) {
+                    console.log('🔄 Retrying Reddit analysis with new API key...');
+                    geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                } else {
+                    throw aiError;
+                }
+            }
+            
             const scoredPosts = parseGeminiResponse(geminiResponse.text);
             
             const filteredPosts = scoredPosts.map((scoredPost: { postUrl: string; relevance: number }) => {
@@ -922,7 +938,19 @@ const findTwitterPostsInternal = async (
                 Tweets: ${JSON.stringify(tweetsForAnalysis)}
                 Return JSON array with postUrl and relevance score for tweets scoring >= 70.`;
                 
-                const geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                let geminiResponse;
+                try {
+                    geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                } catch (aiError) {
+                    // If API key failed, try with next key
+                    if (handleApiError(aiError)) {
+                        console.log('🔄 Retrying Twitter analysis with new API key...');
+                        geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                    } else {
+                        throw aiError;
+                    }
+                }
+                
                 const scoredTweets = parseGeminiResponse(geminiResponse.text);
                 
                 const tweetMap = new Map(tweets.map(t => [t.postUrl, t]));
