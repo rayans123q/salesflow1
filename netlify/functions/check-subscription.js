@@ -24,6 +24,31 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // TEMPORARY: Override for known paid users
+    // TODO: Remove this once Whop API is properly configured
+    const paidUsers = [
+      'dateflow4@gmail.com',  // Add your paid email here
+      // Add more paid user emails as needed
+    ];
+
+    if (paidUsers.includes(userEmail.toLowerCase())) {
+      console.log('✅ Paid user override:', userEmail);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          hasActiveSubscription: true,
+          subscriptionStatus: 'active',
+          membership: {
+            id: 'override',
+            status: 'active',
+            valid: true,
+            expires_at: null
+          }
+        })
+      };
+    }
+
     const whopApiKey = process.env.VITE_WHOP_API_KEY;
     const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
 
