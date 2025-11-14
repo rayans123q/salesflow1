@@ -49,20 +49,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 if (data.user) {
                     // Check if email confirmation is required
                     if (data.user.email_confirmed_at) {
-                        // User is immediately confirmed - redirect to Whop payment
-                        console.log('✅ Sign up successful, redirecting to payment...');
-                        
-                        const checkoutUrl = whopService.getCheckoutUrl();
-                        
-                        if (checkoutUrl && checkoutUrl !== '#') {
-                            console.log('🔄 Redirecting to Whop checkout:', checkoutUrl);
-                            // Redirect to payment
-                            window.location.href = checkoutUrl;
-                        } else {
-                            console.error('❌ Failed to get checkout URL');
-                            setError('Payment setup error. Please contact support.');
-                            setLoading(false);
-                        }
+                        // User is immediately confirmed - grant access (no payment required)
+                        console.log('✅ Sign up successful, granting access...');
+                        onLogin({
+                            id: data.user.id,
+                            email: data.user.email!,
+                            name: data.user.user_metadata?.name || name.trim() || data.user.email!.split('@')[0],
+                        });
+                        setLoading(false);
                     } else {
                         // Email confirmation required
                         setMessage('Please check your email to confirm your account before signing in.');

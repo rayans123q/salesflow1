@@ -105,8 +105,8 @@ const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                         Sales Flow scans Reddit and Discord for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
                     </p>
                     <div className="flex flex-col items-center gap-4">
-                        <button onClick={handleGetStarted} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
-                            Get Started - $9/month
+                        <button onClick={onLogin} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
+                            Get Started
                         </button>
                         <button onClick={onLogin} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] text-white font-semibold px-8 py-3 rounded-lg hover:bg-black/20 dark:hover:bg-white/10 transition-colors">
                             Already have an account? Login
@@ -200,43 +200,30 @@ const CalendlyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
 const PricingSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
     const [isCalendlyOpen, setIsCalendlyOpen] = useState(false);
 
-    const handleGetStarted = () => {
-        // Get Whop checkout URL with redirect
-        const checkoutUrl = whopService.getCheckoutUrl();
-        
-        if (checkoutUrl !== '#') {
-            // Redirect to Whop checkout
-            window.location.href = checkoutUrl;
-        } else {
-            // Fallback to login if Whop not configured
-            onLogin();
-        }
-    };
-
     return (
         <>
             <section id="pricing" className="py-20 bg-[var(--bg-secondary)]">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <AnimatedSection>
                         <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
-                            <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Subscribe to access Sales Flow and start finding leads.</p>
+                            <h2 className="text-3xl md:text-4xl font-bold">Get Started for Free</h2>
+                            <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Start using Sales Flow today - no payment required.</p>
                         </div>
                     </AnimatedSection>
                     <div className="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                         <AnimatedSection stagger className="col-span-3 lg:col-span-1">
                             <div className="bg-[var(--bg-tertiary)] p-8 rounded-2xl border border-[var(--border-color)] h-full flex flex-col" style={{'--stagger-delay': '0ms'} as React.CSSProperties}>
-                                <h3 className="text-2xl font-bold">Starter</h3>
-                                <p className="text-[var(--text-secondary)] mt-2 mb-6">For individuals and small teams.</p>
-                                <p className="text-4xl font-extrabold mb-6">$9<span className="text-lg font-normal text-[var(--text-secondary)]">/mo</span></p>
+                                <h3 className="text-2xl font-bold">Free Access</h3>
+                                <p className="text-[var(--text-secondary)] mt-2 mb-6">For everyone - no payment required.</p>
+                                <p className="text-4xl font-extrabold mb-6">Free<span className="text-lg font-normal text-[var(--text-secondary)]"></span></p>
                                 <ul className="space-y-4 text-[var(--text-secondary)] mb-8 flex-grow">
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Unlimited Campaigns</li>
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>50 Refreshes/mo</li>
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>250 AI Responses/mo</li>
-                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Priority Support</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Full Access</li>
                                 </ul>
                                 <button 
-                                    onClick={handleGetStarted} 
+                                    onClick={onLogin} 
                                     className="w-full bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity"
                                 >
                                     Get Started

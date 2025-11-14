@@ -91,15 +91,9 @@ const App: React.FC = () => {
                     if (userData) {
                         setUser(userData);
                         
-                        // Check subscription status on session restore
-                        if (whopService.isConfigured()) {
-                            const hasActive = await whopService.hasActiveSubscription(userData.id);
-                            setHasSubscription(hasActive);
-                            setShowPaymentGate(!hasActive);
-                        } else {
-                            setHasSubscription(true);
-                            setShowPaymentGate(false);
-                        }
+                        // Grant access to all users (payment gate disabled)
+                        setHasSubscription(true);
+                        setShowPaymentGate(false);
                     } else {
                         const newUser = {
                             id: session.user.id,
@@ -109,15 +103,9 @@ const App: React.FC = () => {
                         };
                         setUser(newUser);
                         
-                        // Check subscription status on session restore
-                        if (whopService.isConfigured()) {
-                            const hasActive = await whopService.hasActiveSubscription(newUser.id);
-                            setHasSubscription(hasActive);
-                            setShowPaymentGate(!hasActive);
-                        } else {
-                            setHasSubscription(true);
-                            setShowPaymentGate(false);
-                        }
+                        // Grant access to all users (payment gate disabled)
+                        setHasSubscription(true);
+                        setShowPaymentGate(false);
                     }
                 }
             } catch (error) {
@@ -141,20 +129,9 @@ const App: React.FC = () => {
                 };
                 setUser(newUser);
                 
-                // Check subscription status on sign in (non-blocking)
-                if (whopService.isConfigured()) {
-                    whopService.hasActiveSubscription(newUser.id).then(hasActive => {
-                        setHasSubscription(hasActive);
-                        setShowPaymentGate(!hasActive);
-                    }).catch(err => {
-                        console.error('Failed to check subscription:', err);
-                        setHasSubscription(false);
-                        setShowPaymentGate(true);
-                    });
-                } else {
-                    setHasSubscription(true);
-                    setShowPaymentGate(false);
-                }
+                // Grant access to all users (payment gate disabled)
+                setHasSubscription(true);
+                setShowPaymentGate(false);
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 setHasSubscription(false);
@@ -243,25 +220,7 @@ const App: React.FC = () => {
         loadUserData();
     }, [user?.id, showNotification]);
 
-    // Periodic subscription check to prevent bypass
-    useEffect(() => {
-        if (!user?.id || !whopService.isConfigured()) return;
-
-        // Check subscription every 5 minutes
-        const intervalId = setInterval(async () => {
-            console.log('🔄 Periodic subscription check...');
-            const hasActive = await whopService.hasActiveSubscription(user.id);
-            setHasSubscription(hasActive);
-            
-            // If subscription is no longer active, show payment gate
-            if (!hasActive && !showPaymentGate) {
-                setShowPaymentGate(true);
-                showNotification('error', 'Your subscription has expired. Please renew to continue.');
-            }
-        }, 5 * 60 * 1000); // 5 minutes
-
-        return () => clearInterval(intervalId);
-    }, [user?.id, showPaymentGate, showNotification]);
+    // Periodic subscription check disabled - free access for all users
 
     // Handle onboarding when subscription becomes active
     useEffect(() => {
