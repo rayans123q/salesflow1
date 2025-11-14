@@ -122,6 +122,8 @@ const App: React.FC = () => {
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('🔔 Auth event:', event, 'User:', session?.user?.email);
+            
             if (event === 'SIGNED_IN' && session?.user) {
                 const newUser = {
                     id: session.user.id,
@@ -132,6 +134,8 @@ const App: React.FC = () => {
                 
                 // Set user state immediately (non-blocking)
                 setUser(newUser);
+                setIsInitializing(false); // Make sure we're not in initializing state
+                console.log('✅ User set:', newUser.email);
                 
                 // Check subscription status in background (non-blocking)
                 (async () => {
