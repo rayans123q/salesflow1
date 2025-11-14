@@ -137,7 +137,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
     const handleGoogleSignIn = async () => {
         setError(null);
-        setLoading(true);
 
         try {
             console.log('🔵 Initiating Google OAuth sign-in...');
@@ -160,17 +159,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
             if (signInError) {
                 console.error('❌ Google OAuth error:', signInError);
                 setError(signInError.message);
-                setLoading(false);
                 return;
             }
 
-            console.log('✅ Google OAuth initiated, redirecting...');
-            // User will be redirected to Google, then back to app
-            // The onAuthStateChange listener will handle the rest
+            // Check if we got a URL to redirect to
+            if (data?.url) {
+                console.log('✅ Redirecting to Google OAuth URL:', data.url);
+                window.location.href = data.url;
+            } else {
+                console.log('✅ Google OAuth initiated, waiting for redirect...');
+            }
         } catch (err) {
             console.error('❌ Google sign-in error:', err);
             setError('Failed to sign in with Google. Please try again.');
-            setLoading(false);
         }
     };
 
