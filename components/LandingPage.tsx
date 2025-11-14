@@ -30,8 +30,8 @@ const Header: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
                     <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Pricing</a>
                     <a href="#story" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Our Story</a>
                 </nav>
-                <button onClick={onLogin} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] font-semibold px-4 py-2 rounded-lg hover:bg-black/20 dark:hover:bg-white/10 transition-colors">
-                    Login
+                <button onClick={onLogin} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm font-medium">
+                    Already have an account? <span className="text-[var(--brand-primary)]">Login</span>
                 </button>
             </div>
         </div>
@@ -107,9 +107,6 @@ const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                     <div className="flex flex-col items-center gap-4">
                         <button onClick={onLogin} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
                             Get Started
-                        </button>
-                        <button onClick={onLogin} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] text-white font-semibold px-8 py-3 rounded-lg hover:bg-black/20 dark:hover:bg-white/10 transition-colors">
-                            Already have an account? Login
                         </button>
                     </div>
                 </AnimatedSection>
