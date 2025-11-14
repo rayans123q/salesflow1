@@ -26,8 +26,9 @@ exports.handler = async (event, context) => {
 
     // TEMPORARY: Whitelist for verified paid users while debugging Whop API
     const verifiedPaidUsers = [
-      'dateflow4@gmail.com',  // Paid user confirmed in Whop dashboard
-      'rwenzo053@gmail.com'   // Testing account
+      'dateflow4@gmail.com',   // Paid user confirmed in Whop dashboard
+      'rwenzo053@gmail.com',   // Testing account
+      'rwenzo112@gmail.com'    // Paid user
     ];
 
     if (verifiedPaidUsers.includes(userEmail.toLowerCase())) {
