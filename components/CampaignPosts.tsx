@@ -368,8 +368,43 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                     ))
                 ) : (
                      <div className="text-center py-16 bg-[var(--bg-secondary)] rounded-xl border border-dashed border-[var(--border-color)]">
-                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">No Posts Found</h3>
-                        <p className="text-[var(--text-secondary)]">Try adjusting your filters or refreshing the campaign.</p>
+                        <div className="mb-4">
+                            <svg className="w-16 h-16 mx-auto text-[var(--text-secondary)] opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">No Posts Found Yet</h3>
+                        <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
+                            {activeFilters.statuses.length > 0 
+                                ? "No posts match your current filters. Try clearing filters or refreshing the campaign."
+                                : "This campaign doesn't have any posts yet. The API might have been overloaded or no matching posts were found."}
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                            <button 
+                                onClick={handleRefreshClick}
+                                disabled={isRefreshing}
+                                className="bg-[var(--brand-primary)] text-white font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isRefreshing ? (
+                                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Refreshing...</>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Refresh Campaign
+                                    </>
+                                )}
+                            </button>
+                            {activeFilters.statuses.length > 0 && (
+                                <button 
+                                    onClick={handleClearFilters}
+                                    className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium px-4 py-2 transition-colors"
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

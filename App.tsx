@@ -473,10 +473,22 @@ const App: React.FC = () => {
         setFindingLeadsCampaign(newCampaignData);
         setPage('FINDING_LEADS');
         
+        let generatedPosts: any[] = [];
+        let searchError: string | null = null;
+        
+        // Try to find leads, but don't fail if it doesn't work
         try {
             const hasActiveSubscription = subscription.subscribed && subscription.status === 'active';
-            const generatedPosts = await findLeads(newCampaignData, redditCreds, hasActiveSubscription);
+            generatedPosts = await findLeads(newCampaignData, redditCreds, hasActiveSubscription);
+            console.log(`✅ Found ${generatedPosts.length} posts`);
+        } catch (error) {
+            console.error("⚠️ Failed to find leads, but will create campaign anyway:", error);
+            searchError = error instanceof Error ? error.message : 'Unknown error';
+            generatedPosts = []; // Empty array, campaign will have 0 posts
+        }
 
+        // ALWAYS create the campaign, even if no posts found
+        try {
             const newCampaign: Campaign = await databaseService.createCampaign(user.id, {
                 ...newCampaignData,
                 status: 'active',
@@ -487,23 +499,33 @@ const App: React.FC = () => {
                 lastRefreshed: new Date().toISOString(),
             });
 
-            // Create posts in database
-            const postsToCreate = generatedPosts.map(p => ({
-                ...p,
-                campaignId: newCampaign.id,
-                status: 'new' as const,
-            }));
-            
-            const createdPosts = await databaseService.createPosts(postsToCreate);
+            // Create posts in database (if any were found)
+            if (generatedPosts.length > 0) {
+                const postsToCreate = generatedPosts.map(p => ({
+                    ...p,
+                    campaignId: newCampaign.id,
+                    status: 'new' as const,
+                }));
+                
+                const createdPosts = await databaseService.createPosts(postsToCreate);
+                setPosts(prev => [...prev, ...createdPosts]);
+            }
 
             setCampaigns(prev => [...prev, newCampaign]);
-            setPosts(prev => [...prev, ...createdPosts]);
             setPage('CAMPAIGNS');
-            showNotification('success', `Campaign "${newCampaign.name}" created successfully!`);
+            
+            // Show appropriate notification
+            if (generatedPosts.length > 0) {
+                showNotification('success', `Campaign "${newCampaign.name}" created with ${generatedPosts.length} posts!`);
+            } else if (searchError) {
+                showNotification('error', `Campaign created, but no posts found. ${searchError.includes('overloaded') ? 'API is overloaded - try refreshing later.' : 'Try adjusting your keywords or refresh later.'}`);
+            } else {
+                showNotification('success', `Campaign "${newCampaign.name}" created! No posts found yet - try refreshing.`);
+            }
 
         } catch (error) {
-            console.error("Failed to find leads:", error);
-            showNotification('error', `Failed to find posts. Please try again.`);
+            console.error("❌ Failed to create campaign:", error);
+            showNotification('error', `Failed to create campaign. Please try again.`);
             setPage('CREATE_CAMPAIGN');
         } finally {
             setFindingLeadsCampaign(null);
