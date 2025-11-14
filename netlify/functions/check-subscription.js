@@ -26,8 +26,8 @@ exports.handler = async (event, context) => {
 
     // TEMPORARY: Whitelist for verified paid users while debugging Whop API
     const verifiedPaidUsers = [
-      'rwenzo053@gmail.com',
-      'dateflow4@gmail.com'
+      'dateflow4@gmail.com',  // Paid user confirmed in Whop dashboard
+      'rwenzo053@gmail.com'   // Testing account
     ];
 
     if (verifiedPaidUsers.includes(userEmail.toLowerCase())) {
@@ -66,14 +66,32 @@ exports.handler = async (event, context) => {
 
     console.log('🔍 Checking subscription via Whop API for:', userEmail);
 
-    // Check user's membership status via Whop API v5
-    const response = await fetch(`https://api.whop.com/api/v5/memberships?email=${encodeURIComponent(userEmail)}`, {
+    // Check user's membership status via Whop API
+    // Try multiple endpoints to find the user
+    let response;
+    let apiVersion = 'v5';
+    
+    // Try v5 first
+    response = await fetch(`https://api.whop.com/api/v5/memberships`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${whopApiKey}`,
         'Content-Type': 'application/json',
       },
     });
+    
+    // If v5 fails, try v2
+    if (!response.ok) {
+      console.log('⚠️ v5 failed, trying v2...');
+      apiVersion = 'v2';
+      response = await fetch(`https://api.whop.com/api/v2/memberships`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${whopApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -104,30 +122,37 @@ exports.handler = async (event, context) => {
     }
 
     const data = await response.json();
-    console.log('📦 Whop API response:', JSON.stringify(data, null, 2));
+    console.log(`📦 Whop API ${apiVersion} response:`, JSON.stringify(data, null, 2));
     
     // Find active membership for this user
-    const memberships = data.data || [];
+    const memberships = data.data || data.memberships || [];
+    console.log(`📊 Found ${memberships.length} total memberships`);
+    
     const activeMembership = memberships.find(membership => {
-      const isActive = membership.status === 'active';
+      // Check if email matches (case insensitive)
+      const emailMatch = membership.email?.toLowerCase() === userEmail.toLowerCase() ||
+                        membership.user?.email?.toLowerCase() === userEmail.toLowerCase();
+      
+      const isActive = membership.status === 'active' || membership.status === 'trialing';
       const notCancelled = !membership.cancel_at_period_end;
       const isValid = membership.valid !== false;
       
       console.log(`🔍 Checking membership ${membership.id}:`, {
+        email: membership.email || membership.user?.email,
+        emailMatch,
         status: membership.status,
         isActive,
         notCancelled,
-        isValid,
-        email: membership.email
+        isValid
       });
       
-      return isActive && notCancelled && isValid;
+      return emailMatch && isActive && notCancelled && isValid;
     });
 
     if (activeMembership) {
       console.log('✅ Active subscription found:', activeMembership.id);
     } else {
-      console.log('❌ No active subscription found');
+      console.log('❌ No active subscription found for:', userEmail);
     }
 
     return {
