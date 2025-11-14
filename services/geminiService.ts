@@ -775,6 +775,13 @@ const findRedditPostsInternal = async (
             const filteredPosts = scoredPosts.map((scoredPost: { postUrl: string; relevance: number }) => {
                 if (!scoredPost?.postUrl) return null;
                 const normalizedUrl = normalizeRedditUrl(scoredPost.postUrl);
+                
+                // Validate URL format
+                if (!normalizedUrl.startsWith('https://www.reddit.com/r/') && !normalizedUrl.startsWith('https://reddit.com/r/')) {
+                    console.warn('⚠️ Invalid Reddit URL format:', normalizedUrl);
+                    return null;
+                }
+                
                 const originalPostData = postMap.get(normalizedUrl);
                 return originalPostData ? { ...originalPostData, postUrl: normalizedUrl, relevance: scoredPost.relevance } : null;
             }).filter(Boolean);
@@ -783,17 +790,17 @@ const findRedditPostsInternal = async (
             return filteredPosts;
         } catch (error) {
             console.error("❌ Reddit API search failed:", error);
-            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-                console.warn("⚠️ CORS error detected - Reddit API blocked by browser. Falling back to Gemini Search...");
-            }
-            console.log("🔄 Falling back to Gemini Search...");
-            // Continue to fallback below
+            console.log("⚠️ No fallback available - Reddit API is required for accurate results");
+            throw new Error("Reddit API failed. Please check your credentials or try again later.");
         }
+    } else {
+        console.log("⚠️ No Reddit API credentials available");
+        throw new Error("Reddit API credentials required. Please add them in Settings.");
     }
     
-    // Fallback to Google Search via Gemini
-    console.log("🔵 Using Gemini Search (fallback method) for Reddit posts...");
-    console.log("💡 Tip: Add Reddit API credentials in Settings for faster, real-time results");
+    // Remove Gemini Search fallback - it returns fake/irrelevant posts
+    // Only use real Reddit API data
+    console.log("❌ Gemini Search fallback removed - only real Reddit posts are returned");
     const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
     const negativeKeywordsQuery = campaign.negativeKeywords?.length ? ` (excluding posts with these keywords: ${campaign.negativeKeywords.join(', ')})` : '';
     const subredditsQuery = campaign.subreddits?.length ? `within these subreddits: ${campaign.subreddits.map(s => `r/${s}`).join(', ')}` : 'across all of Reddit';
