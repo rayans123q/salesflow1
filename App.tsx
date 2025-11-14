@@ -311,10 +311,12 @@ const App: React.FC = () => {
 
     const handlePerformLogin = async (userData: { id: string; email: string; name: string }) => {
         try {
+            console.log('📞 handlePerformLogin called with user:', userData.email);
             // Just close the modal and show success
             // The onAuthStateChange listener will handle setting user and checking subscription
             setShowLoginModal(false);
             showNotification('success', 'Successfully signed in!');
+            console.log('✅ Login modal closed and notification shown');
         } catch (error) {
             console.error('Failed to login:', error);
             showNotification('error', 'Failed to login. Please try again.');

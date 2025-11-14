@@ -45,7 +45,7 @@ class WhopService {
       // Always verify with Whop API first for security
       console.log('🔄 Verifying subscription with Whop API...');
       
-      // Add overall timeout for the entire check
+      // Add overall timeout for the entire check - reduced to 5 seconds for faster response
       const checkPromise = (async () => {
         const subscription = await this.getUserSubscription(userId);
         const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
@@ -69,7 +69,7 @@ class WhopService {
       })();
 
       const timeoutPromise = new Promise<boolean>((_, reject) => 
-        setTimeout(() => reject(new Error('Subscription check timeout')), 15000)
+        setTimeout(() => reject(new Error('Subscription check timeout')), 5000)
       );
 
       const isActive = await Promise.race([checkPromise, timeoutPromise]);

@@ -84,6 +84,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 }
 
                 if (data.user) {
+                    console.log('✅ Sign in successful, calling onLogin callback');
                     // Auth successful - the onAuthStateChange listener will handle the rest
                     // Just call onLogin to close modal and show success
                     onLogin({
@@ -91,6 +92,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                         email: data.user.email!,
                         name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
                     });
+                    console.log('✅ onLogin callback completed, clearing loading state');
                     setLoading(false);
                 }
             }
