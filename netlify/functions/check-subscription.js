@@ -24,6 +24,31 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // TEMPORARY: Whitelist for verified paid users while debugging Whop API
+    const verifiedPaidUsers = [
+      'rwenzo053@gmail.com',
+      'dateflow4@gmail.com'
+    ];
+
+    if (verifiedPaidUsers.includes(userEmail.toLowerCase())) {
+      console.log('✅ Verified paid user (whitelist):', userEmail);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          hasActiveSubscription: true,
+          subscriptionStatus: 'active',
+          source: 'whitelist',
+          membership: {
+            id: 'verified',
+            status: 'active',
+            valid: true,
+            expires_at: null
+          }
+        })
+      };
+    }
+
     const whopApiKey = process.env.VITE_WHOP_API_KEY;
     const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
 
@@ -39,7 +64,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    console.log('🔍 Checking subscription for:', userEmail);
+    console.log('🔍 Checking subscription via Whop API for:', userEmail);
 
     // Check user's membership status via Whop API v5
     const response = await fetch(`https://api.whop.com/api/v5/memberships?email=${encodeURIComponent(userEmail)}`, {
