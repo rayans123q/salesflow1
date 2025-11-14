@@ -1,0 +1,3 @@
+Force deployment - Twitter integration
+Timestamp: 2025-01-14 11:45 AM
+This triggers Netlify to rebuild with latest changes including Twitter/X integration
