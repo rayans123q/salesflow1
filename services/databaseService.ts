@@ -471,6 +471,9 @@ export const databaseService = {
     subscription: { subscribed: boolean; status: 'active' | 'inactive' | 'cancelled' | 'expired' | 'trialing'; startedAt?: string; expiresAt?: string };
     usage: { campaigns: number; refreshes: number; aiResponses: number };
   }> {
+    // First, check and reset usage if needed (monthly reset)
+    await this.checkAndResetMonthlyUsage(userId);
+    
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
@@ -517,11 +520,30 @@ export const databaseService = {
         expiresAt: data.subscription_expires_at || undefined,
       },
       usage: {
-        campaigns: data.usage_campaigns,
-        refreshes: data.usage_refreshes,
-        aiResponses: data.usage_ai_responses,
+        campaigns: data.usage_campaigns || 0,
+        refreshes: data.usage_refreshes || 0,
+        aiResponses: data.usage_ai_responses || 0,
       },
     };
+  },
+
+  // Check and reset monthly usage if 30 days have passed
+  async checkAndResetMonthlyUsage(userId: string): Promise<void> {
+    try {
+      const { data, error } = await supabase
+        .rpc('check_and_reset_user_usage', { p_user_id: userId });
+      
+      if (error) {
+        console.warn('⚠️ Could not check monthly usage reset:', error);
+        return;
+      }
+      
+      if (data && data.length > 0 && data[0].was_reset) {
+        console.log('🔄 Monthly usage limits have been reset for user');
+      }
+    } catch (error) {
+      console.warn('⚠️ Error checking monthly usage:', error);
+    }
   },
 
   async updateUserSettings(

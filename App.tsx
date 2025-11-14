@@ -56,7 +56,9 @@ const App: React.FC = () => {
     const [redditCreds, setRedditCreds] = useState<RedditCredentials | null>(null);
     const [subscription, setSubscription] = useState<Subscription>({ subscribed: false, status: 'inactive' });
 
-    const [limits] = useState({ campaigns: 10, refreshes: 50, aiResponses: 250 });
+    // Usage limits - same for all users (free and paid)
+    // Limits reset monthly automatically
+    const [limits] = useState({ campaigns: Infinity, refreshes: 50, aiResponses: 250 });
     const [usage, setUsage] = useState({ campaigns: 0, refreshes: 0, aiResponses: 0 });
 
     const defaultAiStyle: Omit<AIStyleSettings, 'customOffer' | 'saveStyle'> = {
@@ -529,11 +531,7 @@ const App: React.FC = () => {
     const handleCreateCampaign = async (newCampaignData: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>) => {
         if (!user?.id) return;
         
-        if (usage.campaigns >= limits.campaigns) {
-            showNotification('error', `Campaign limit reached (${limits.campaigns}/${limits.campaigns}).`);
-            setPage('CAMPAIGNS');
-            return;
-        }
+        // No campaign limit - unlimited campaigns for all users
         
         setFindingLeadsCampaign(newCampaignData);
         setPage('FINDING_LEADS');
@@ -560,8 +558,6 @@ const App: React.FC = () => {
                 leadsFound: generatedPosts.length,
                 highPotential: generatedPosts.filter(p => p.relevance > 95).length,
                 contacted: 0,
-                createdAt: new Date().toISOString(),
-                lastRefreshed: new Date().toISOString(),
             });
 
             // Create posts in database (if any were found)
@@ -577,6 +573,16 @@ const App: React.FC = () => {
             }
 
             setCampaigns(prev => [...prev, newCampaign]);
+            
+            // Increment usage counter
+            const newUsage = { ...usage, campaigns: usage.campaigns + 1 };
+            setUsage(newUsage);
+            
+            // Save usage to database
+            if (user?.id) {
+                await databaseService.updateUserSettings(user.id, { usage: newUsage });
+            }
+            
             setPage('CAMPAIGNS');
             
             // Show appropriate notification
