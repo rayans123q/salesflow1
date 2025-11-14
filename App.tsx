@@ -82,30 +82,30 @@ const App: React.FC = () => {
                 
                 if (accessToken) {
                     console.log('🔑 OAuth callback detected, setting session...');
+                    setIsInitializing(false); // Stop showing loading immediately
                     
                     // Set the session from OAuth tokens and wait for it
-                    try {
-                        const { data, error } = await supabase.auth.setSession({
-                            access_token: accessToken,
-                            refresh_token: refreshToken || '',
-                        });
+                    const { data, error } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken || '',
+                    });
+                    
+                    if (error) {
+                        console.error('❌ Failed to set session:', error);
+                        setIsLoading(false);
+                    } else {
+                        console.log('✅ Session set successfully:', data.user?.email);
                         
-                        if (error) {
-                            console.error('❌ Failed to set session:', error);
-                        } else {
-                            console.log('✅ Session set successfully:', data.user?.email);
-                            
-                            // Store a flag to indicate we just logged in
-                            sessionStorage.setItem('just_logged_in', 'true');
-                            
-                            // Redirect to clean URL after session is set
-                            console.log('🔄 Redirecting to dashboard...');
+                        // Store a flag to indicate we just logged in
+                        sessionStorage.setItem('just_logged_in', 'true');
+                        
+                        // Redirect to clean URL after session is set
+                        console.log('🔄 Redirecting to dashboard...');
+                        setTimeout(() => {
                             window.location.href = window.location.origin;
-                            return; // Stop further execution
-                        }
-                    } catch (err) {
-                        console.error('❌ Error setting session:', err);
+                        }, 100);
                     }
+                    return; // Stop further execution
                 }
                 
                 // Check session with timeout (increased to 5 seconds for OAuth)
