@@ -103,3 +103,6 @@ $$;
 -- SELECT reset_monthly_usage();
 -- Or for a specific user:
 -- SELECT * FROM check_and_reset_user_usage('user-email@example.com');
+
+-- OPTIONAL: Reset all users to 0 (run this if you want to give everyone a fresh start)
+-- UPDATE user_settings SET usage_campaigns = 0, usage_refreshes = 0, usage_ai_responses = 0, usage_reset_date = NOW();
