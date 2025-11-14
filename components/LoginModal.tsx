@@ -36,7 +36,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                         data: {
                             name: name.trim() || email.split('@')[0], // Use name from form or email username
                         },
-                        emailRedirectTo: `${window.location.origin}`,
+                        emailRedirectTo: 'https://salesflow1.netlify.app',
                     },
                 });
 
@@ -120,7 +120,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
         try {
             const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
+                redirectTo: 'https://salesflow1.netlify.app/reset-password',
             });
 
             if (resetError) {
@@ -141,12 +141,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
         try {
             console.log('🔵 Initiating Google OAuth sign-in...');
-            console.log('🔗 Redirect URL:', window.location.origin);
+            const redirectUrl = 'https://salesflow1.netlify.app';
+            console.log('🔗 Redirect URL:', redirectUrl);
             
             const { data, error: signInError } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin,
+                    redirectTo: redirectUrl,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',

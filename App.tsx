@@ -78,11 +78,26 @@ const App: React.FC = () => {
                 // Check if we're coming back from OAuth (hash contains access_token)
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
                 
                 if (accessToken) {
-                    console.log('🔑 OAuth callback detected with access token');
-                    // Let Supabase handle the OAuth callback
-                    await supabase.auth.getSession();
+                    console.log('🔑 OAuth callback detected, setting session...');
+                    try {
+                        // Set the session from OAuth tokens
+                        const { data, error } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken || '',
+                        });
+                        
+                        if (error) {
+                            console.error('❌ Failed to set session:', error);
+                        } else {
+                            console.log('✅ Session set successfully:', data.user?.email);
+                        }
+                    } catch (err) {
+                        console.error('❌ Error setting session:', err);
+                    }
+                    
                     // Clear the hash from URL
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
