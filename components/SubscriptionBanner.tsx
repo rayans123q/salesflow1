@@ -19,11 +19,11 @@ const SubscriptionBanner: React.FC<SubscriptionBannerProps> = ({ onUpgrade, onDi
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-amber-100">
-                                <span className="hidden sm:inline">You're on the free plan. </span>
-                                <span className="font-semibold">Upgrade to unlock all features</span>
+                                <span className="hidden sm:inline">Limited access. </span>
+                                <span className="font-semibold">Upgrade for $9/month to unlock all features</span>
                             </p>
                             <p className="text-xs text-amber-200/80 hidden md:block mt-0.5">
-                                View posts on Reddit/Twitter and generate AI comments with a subscription
+                                View posts on Reddit/Twitter and generate AI comments • Cancel anytime
                             </p>
                         </div>
                     </div>

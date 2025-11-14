@@ -44,7 +44,7 @@ const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
     const sectionRef = React.useRef<HTMLElement>(null);
 
     const handleGetStarted = () => {
-        const checkoutUrl = whopService.getCheckoutUrl();
+        const checkoutUrl = whopService.getCheckoutUrl('guest@example.com');
         
         if (checkoutUrl !== '#') {
             window.location.href = checkoutUrl;
@@ -206,16 +206,19 @@ const PricingSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <AnimatedSection>
                         <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-bold">Get Started for Free</h2>
-                            <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Start using Sales Flow today - no payment required.</p>
+                            <h2 className="text-3xl md:text-4xl font-bold">Simple, Transparent Pricing</h2>
+                            <p className="max-w-xl mx-auto text-[var(--text-secondary)] mt-4">Get full access to Sales Flow for just $9/month.</p>
                         </div>
                     </AnimatedSection>
                     <div className="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                         <AnimatedSection stagger className="col-span-3 lg:col-span-1">
-                            <div className="bg-[var(--bg-tertiary)] p-8 rounded-2xl border border-[var(--border-color)] h-full flex flex-col" style={{'--stagger-delay': '0ms'} as React.CSSProperties}>
-                                <h3 className="text-2xl font-bold">Free Access</h3>
-                                <p className="text-[var(--text-secondary)] mt-2 mb-6">For everyone - no payment required.</p>
-                                <p className="text-4xl font-extrabold mb-6">Free<span className="text-lg font-normal text-[var(--text-secondary)]"></span></p>
+                            <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 p-8 rounded-2xl border-2 border-violet-500/50 h-full flex flex-col relative overflow-hidden" style={{'--stagger-delay': '0ms'} as React.CSSProperties}>
+                                <div className="absolute top-4 right-4 bg-violet-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                    BEST VALUE
+                                </div>
+                                <h3 className="text-2xl font-bold">Monthly Plan</h3>
+                                <p className="text-[var(--text-secondary)] mt-2 mb-6">Full access to all features</p>
+                                <p className="text-4xl font-extrabold mb-6">$9<span className="text-lg font-normal text-[var(--text-secondary)]">/month</span></p>
                                 <ul className="space-y-4 text-[var(--text-secondary)] mb-8 flex-grow">
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>Unlimited Campaigns</li>
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-[var(--success)]"/>50 Refreshes/mo</li>
