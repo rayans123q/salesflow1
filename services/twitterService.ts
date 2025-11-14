@@ -50,7 +50,8 @@ class TwitterService {
 
   async searchTweets(query: string, maxResults: number = 10): Promise<TwitterSearchResult[]> {
     if (!this.isConfigured()) {
-      console.warn('⚠️ Twitter API not configured');
+      console.warn('⚠️ Twitter API not configured - Bearer token missing');
+      console.log('💡 Add VITE_TWITTER_BEARER_TOKEN to .env.local to enable Twitter search');
       return [];
     }
 
@@ -60,6 +61,8 @@ class TwitterService {
       // Twitter API v2 endpoint
       const searchQuery = encodeURIComponent(query);
       const url = `https://api.twitter.com/2/tweets/search/recent?query=${searchQuery}&max_results=${maxResults}&tweet.fields=created_at,public_metrics,author_id&expansions=author_id&user.fields=name,username,profile_image_url`;
+
+      console.log('🔗 Twitter API URL:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -72,13 +75,25 @@ class TwitterService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Twitter API error:', response.status, errorText);
+        
+        // Check for common errors
+        if (response.status === 401) {
+          console.error('🔑 Twitter API authentication failed - check your bearer token');
+        } else if (response.status === 403) {
+          console.error('🚫 Twitter API access forbidden - your app may not have access to this endpoint');
+        } else if (response.status === 429) {
+          console.error('⏱️ Twitter API rate limit exceeded');
+        }
+        
         throw new Error(`Twitter API error: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('📊 Twitter API response:', data);
 
       if (!data.data || data.data.length === 0) {
         console.log('📭 No tweets found for query:', query);
+        console.log('💡 Try different keywords or check if tweets exist for this search');
         return [];
       }
 

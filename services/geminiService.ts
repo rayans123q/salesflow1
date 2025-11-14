@@ -835,36 +835,86 @@ const findRedditPostsInternal = async (
 const findTwitterPostsInternal = async (
     campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>
 ): Promise<any[]> => {
-    console.log("🐦 Searching Twitter for leads...");
+    console.log("🐦 Searching Twitter/X for leads...");
+    
+    // Try Twitter API first if configured
+    if (twitterService.isConfigured()) {
+        try {
+            console.log("🔵 Using Twitter API for real-time data...");
+            const searchQuery = campaign.keywords.join(' OR ');
+            const tweets = await twitterService.searchTweets(searchQuery, 10);
+            
+            if (tweets.length > 0) {
+                // Transform Twitter results to our Post format
+                const results = tweets.map(tweet => ({
+                    postUrl: tweet.postUrl,
+                    subreddit: 'twitter', // Using subreddit field for source
+                    title: tweet.title,
+                    content: tweet.content,
+                    author: tweet.author,
+                    relevance: tweet.score,
+                    contacted: false,
+                }));
+                
+                console.log(`✅ Twitter API found ${results.length} tweets`);
+                return results;
+            }
+            
+            console.log('📭 Twitter API returned no tweets, falling back to Gemini Search...');
+        } catch (error) {
+            console.error("❌ Twitter API failed:", error);
+            console.log("🔄 Falling back to Gemini Search for Twitter...");
+        }
+    } else {
+        console.log("⚠️ Twitter API not configured, using Gemini Search...");
+        console.log("💡 Add VITE_TWITTER_BEARER_TOKEN to .env.local for real Twitter API access");
+    }
+    
+    // Fallback to Gemini Search
+    console.log("🔵 Using Gemini Search for Twitter/X posts...");
+    const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
+    const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
+    
+    const prompt = `You are an elite lead qualification expert for Twitter/X. Use search to find recent tweets that are potential leads.
+      **CAMPAIGN CONTEXT:**
+      - **Product Description:** ${campaign.description}
+      **SEARCH CRITERIA:**
+      - **Topics/Keywords:** ${keywordsQuery}
+      - **Timeframe:** Tweets created ${dateQuery}
+      **INSTRUCTIONS:**
+      1. **Search & Analyze:** Find up to 10 highly relevant tweets using site:twitter.com or site:x.com
+      2. **Score Relevance (0-100):** 90-100 for explicit requests, 70-89 for clear problems. Exclude below 70.
+      3. **Output:** Return ONLY a JSON array of tweet objects (score >= 70).
+      **JSON SCHEMA:**
+      \`\`\`json
+      [ { "postUrl": "full_tweet_url", "subreddit": "twitter", "title": "Tweet by @username", "content": "tweet_text", "relevance": score_70_to_100 } ]
+      \`\`\`
+      If no relevant tweets found, return: \`[]\`.`;
     
     try {
-        // Build search query from keywords
-        const searchQuery = campaign.keywords.join(' OR ');
-        
-        // Search Twitter using the Twitter service
-        const tweets = await twitterService.searchTweets(searchQuery, 10);
-        
-        if (tweets.length === 0) {
-            console.log('📭 No tweets found');
-            return [];
+        let geminiResponse;
+        try {
+            geminiResponse = await ai.models.generateContent({ 
+                model: "gemini-2.5-pro", 
+                contents: prompt, 
+                config: { tools: [{googleSearch: {}}] } 
+            });
+        } catch (proError: any) {
+            if (proError?.message?.includes('503') || proError?.message?.includes('overloaded')) {
+                console.warn("⚠️ Gemini Pro overloaded, trying Flash...");
+                geminiResponse = await ai.models.generateContent({ 
+                    model: "gemini-2.5-flash", 
+                    contents: prompt, 
+                    config: { tools: [{googleSearch: {}}] } 
+                });
+            } else {
+                throw proError;
+            }
         }
         
-        // Transform Twitter results to our Post format
-        const results = tweets.map(tweet => ({
-            postUrl: tweet.postUrl,
-            subreddit: 'twitter', // Using subreddit field for source
-            title: tweet.title,
-            content: tweet.content,
-            author: tweet.author,
-            relevance: tweet.score,
-            contacted: false,
-        }));
-        
-        console.log(`✅ Found ${results.length} relevant tweets`);
-        return results;
-        
+        return parseGeminiResponse(geminiResponse.text);
     } catch (error) {
-        console.error("❌ Twitter search failed:", error);
+        console.error("❌ Twitter/Gemini search failed:", error);
         return [];
     }
 };
