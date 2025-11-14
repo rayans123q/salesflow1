@@ -27,7 +27,8 @@ exports.handler = async (event, context) => {
     // TEMPORARY: Override for known paid users
     // TODO: Remove this once Whop API is properly configured
     const paidUsers = [
-      'dateflow4@gmail.com',  // Add your paid email here
+      'dateflow4@gmail.com',
+      'rwenzo053@gmail.com',  // Paid user
       // Add more paid user emails as needed
     ];
 

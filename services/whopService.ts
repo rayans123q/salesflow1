@@ -36,11 +36,6 @@ class WhopService {
 
   // Check if user has active subscription (uses backend verification)
   async hasActiveSubscription(userEmail: string): Promise<boolean> {
-    // TEMPORARY: Grant access to all users (payment gate disabled)
-    console.log('✅ Free access granted to all users');
-    return true;
-    
-    /* ORIGINAL CODE - Uncomment when you want to enable payment gate
     if (!this.apiKey) {
       console.warn('⚠️ Whop not configured, denying access');
       return false; // Deny access if Whop not configured
@@ -49,9 +44,9 @@ class WhopService {
     try {
       console.log('🔄 Verifying subscription via backend...');
       
-      // Add timeout to prevent hanging - 3 seconds max
+      // Add timeout to prevent hanging - 5 seconds max
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
       try {
         // Call our secure backend function
@@ -79,7 +74,7 @@ class WhopService {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          console.error('❌ Subscription check timeout (3s)');
+          console.error('❌ Subscription check timeout (5s)');
         } else {
           throw fetchError;
         }
@@ -90,7 +85,6 @@ class WhopService {
       // On error, deny access for security
       return false;
     }
-    */
   }
 
   // Sync Whop subscription data to database
