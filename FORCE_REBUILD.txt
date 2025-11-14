@@ -1,0 +1,2 @@
+Force rebuild timestamp: 2025-01-14 - Login fix deployment
+This file forces Netlify to rebuild with cleared cache.
