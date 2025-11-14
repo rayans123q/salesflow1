@@ -44,25 +44,42 @@ class WhopService {
     try {
       console.log('🔄 Verifying subscription via backend...');
       
-      // Call our secure backend function
-      const response = await fetch('/.netlify/functions/check-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userEmail }),
-      });
+      // Add timeout to prevent hanging - 3 seconds max
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      try {
+        // Call our secure backend function
+        const response = await fetch('/.netlify/functions/check-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userEmail }),
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        console.error('❌ Backend subscription check failed:', response.status);
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error('❌ Backend subscription check failed:', response.status);
+          return false;
+        }
+
+        const data = await response.json();
+        const isActive = data.hasActiveSubscription;
+        
+        console.log(isActive ? '✅ Subscription active' : '❌ No active subscription');
+        return isActive;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.error('❌ Subscription check timeout (3s)');
+        } else {
+          throw fetchError;
+        }
         return false;
       }
-
-      const data = await response.json();
-      const isActive = data.hasActiveSubscription;
-      
-      console.log(isActive ? '✅ Subscription active' : '❌ No active subscription');
-      return isActive;
     } catch (error) {
       console.error('❌ Failed to check subscription:', error);
       // On error, deny access for security

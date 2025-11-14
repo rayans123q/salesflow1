@@ -51,12 +51,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                     if (data.user.email_confirmed_at) {
                         // User is immediately confirmed - grant access (no payment required)
                         console.log('✅ Sign up successful, granting access...');
-                        onLogin({
-                            id: data.user.id,
-                            email: data.user.email!,
-                            name: data.user.user_metadata?.name || name.trim() || data.user.email!.split('@')[0],
-                        });
+                        // Clear loading state immediately
                         setLoading(false);
+                        try {
+                            onLogin({
+                                id: data.user.id,
+                                email: data.user.email!,
+                                name: data.user.user_metadata?.name || name.trim() || data.user.email!.split('@')[0],
+                            });
+                        } catch (loginError) {
+                            console.error('❌ onLogin callback error:', loginError);
+                            // Don't show error to user, auth was successful
+                        }
                     } else {
                         // Email confirmation required
                         setMessage('Please check your email to confirm your account before signing in.');
@@ -79,15 +85,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
                 if (data.user) {
                     console.log('✅ Sign in successful, calling onLogin callback');
+                    // Clear loading state immediately to prevent freezing
+                    setLoading(false);
                     // Auth successful - the onAuthStateChange listener will handle the rest
                     // Just call onLogin to close modal and show success
-                    onLogin({
-                        id: data.user.id,
-                        email: data.user.email!,
-                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                    });
-                    console.log('✅ onLogin callback completed, clearing loading state');
-                    setLoading(false);
+                    try {
+                        onLogin({
+                            id: data.user.id,
+                            email: data.user.email!,
+                            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                        });
+                        console.log('✅ onLogin callback completed');
+                    } catch (loginError) {
+                        console.error('❌ onLogin callback error:', loginError);
+                        // Don't show error to user, auth was successful
+                    }
                 }
             }
         } catch (err) {
