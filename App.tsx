@@ -849,8 +849,19 @@ const App: React.FC = () => {
         }
     };
 
-    // Show loading state while checking session
-    if (isInitializing) {
+    // Check if user just logged in (from OAuth redirect)
+    const justLoggedIn = sessionStorage.getItem('just_logged_in');
+    
+    // Show loading state while checking session OR just after OAuth login
+    if (isInitializing || justLoggedIn) {
+        if (justLoggedIn) {
+            console.log('🔄 Just logged in, waiting for session to load...');
+            // Remove flag after a delay to give session time to load
+            setTimeout(() => {
+                sessionStorage.removeItem('just_logged_in');
+                window.location.reload(); // Force reload to check session
+            }, 1000);
+        }
         return (
             <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
                 <div className="text-[var(--text-primary)]">Loading...</div>
@@ -858,14 +869,7 @@ const App: React.FC = () => {
         );
     }
 
-    // Check if user just logged in (from OAuth redirect)
-    const justLoggedIn = sessionStorage.getItem('just_logged_in');
-    if (justLoggedIn) {
-        sessionStorage.removeItem('just_logged_in');
-        console.log('🔄 Just logged in, waiting for session to load...');
-    }
-
-    if (!isLoggedIn && !justLoggedIn) {
+    if (!isLoggedIn) {
         console.log('🔴 Not logged in - showing landing page', { user, isLoggedIn, isInitializing });
         return (
             <>
