@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CloseIcon } from '../constants';
 import { supabase } from '../services/supabaseClient';
+import { whopService } from '../services/whopService';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -48,14 +49,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 if (data.user) {
                     // Check if email confirmation is required
                     if (data.user.email_confirmed_at) {
-                        // User is immediately confirmed - just log them in
-                        const userData = {
-                            id: data.user.id,
-                            email: data.user.email!,
-                            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                        };
-                        onLogin(userData);
-                        setLoading(false);
+                        // User is immediately confirmed - redirect to Whop payment
+                        console.log('✅ Sign up successful, redirecting to payment...');
+                        
+                        const checkoutUrl = whopService.getCheckoutUrl();
+                        
+                        if (checkoutUrl && checkoutUrl !== '#') {
+                            console.log('🔄 Redirecting to Whop checkout:', checkoutUrl);
+                            // Redirect to payment
+                            window.location.href = checkoutUrl;
+                        } else {
+                            console.error('❌ Failed to get checkout URL');
+                            setError('Payment setup error. Please contact support.');
+                            setLoading(false);
+                        }
                     } else {
                         // Email confirmation required
                         setMessage('Please check your email to confirm your account before signing in.');
@@ -77,74 +84,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 }
 
                 if (data.user) {
-                    // Try to get user data from our users table
-                    try {
-                        const { data: userData, error: userError } = await supabase
-                            .from('users')
-                            .select('id, name, email')
-                            .eq('id', data.user.id)
-                            .single();
-
-                        if (userError && userError.code === 'PGRST116') {
-                            // User doesn't exist in our table yet, create it
-                            try {
-                                const { data: newUser, error: createError } = await supabase
-                                    .from('users')
-                                    .insert([{
-                                        id: data.user.id,
-                                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                                        email: data.user.email,
-                                    }])
-                                    .select()
-                                    .single();
-
-                                if (createError) {
-                                    console.error('Failed to create user in DB:', createError);
-                                    // Still log them in with auth data
-                                    onLogin({
-                                        id: data.user.id,
-                                        email: data.user.email!,
-                                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                                    });
-                                } else {
-                                    onLogin({
-                                        id: newUser.id,
-                                        email: newUser.email,
-                                        name: newUser.name,
-                                    });
-                                }
-                            } catch (createErr) {
-                                console.error('Error creating user:', createErr);
-                                // Still log them in with auth data
-                                onLogin({
-                                    id: data.user.id,
-                                    email: data.user.email!,
-                                    name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                                });
-                            }
-                        } else if (userData) {
-                            onLogin({
-                                id: userData.id,
-                                email: userData.email || data.user.email!,
-                                name: userData.name,
-                            });
-                        } else {
-                            // Fallback to auth data
-                            onLogin({
-                                id: data.user.id,
-                                email: data.user.email!,
-                                name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                            });
-                        }
-                    } catch (err) {
-                        console.error('Error fetching user data:', err);
-                        // Fallback to auth data
-                        onLogin({
-                            id: data.user.id,
-                            email: data.user.email!,
-                            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-                        });
-                    }
+                    // Auth successful - the onAuthStateChange listener will handle the rest
+                    // Just call onLogin to close modal and show success
+                    onLogin({
+                        id: data.user.id,
+                        email: data.user.email!,
+                        name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+                    });
                     setLoading(false);
                 }
             }

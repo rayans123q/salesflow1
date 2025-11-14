@@ -90,13 +90,34 @@ const App: React.FC = () => {
 
                     if (userData) {
                         setUser(userData);
+                        
+                        // Check subscription status on session restore
+                        if (whopService.isConfigured()) {
+                            const hasActive = await whopService.hasActiveSubscription(userData.id);
+                            setHasSubscription(hasActive);
+                            setShowPaymentGate(!hasActive);
+                        } else {
+                            setHasSubscription(true);
+                            setShowPaymentGate(false);
+                        }
                     } else {
-                        setUser({
+                        const newUser = {
                             id: session.user.id,
                             name: session.user.user_metadata?.name || 'User',
                             email: session.user.email,
                             role: 'user',
-                        });
+                        };
+                        setUser(newUser);
+                        
+                        // Check subscription status on session restore
+                        if (whopService.isConfigured()) {
+                            const hasActive = await whopService.hasActiveSubscription(newUser.id);
+                            setHasSubscription(hasActive);
+                            setShowPaymentGate(!hasActive);
+                        } else {
+                            setHasSubscription(true);
+                            setShowPaymentGate(false);
+                        }
                     }
                 }
             } catch (error) {
@@ -112,14 +133,32 @@ const App: React.FC = () => {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
-                setUser({
+                const newUser = {
                     id: session.user.id,
                     name: session.user.user_metadata?.name || 'User',
                     email: session.user.email,
                     role: 'user',
-                });
+                };
+                setUser(newUser);
+                
+                // Check subscription status on sign in (non-blocking)
+                if (whopService.isConfigured()) {
+                    whopService.hasActiveSubscription(newUser.id).then(hasActive => {
+                        setHasSubscription(hasActive);
+                        setShowPaymentGate(!hasActive);
+                    }).catch(err => {
+                        console.error('Failed to check subscription:', err);
+                        setHasSubscription(false);
+                        setShowPaymentGate(true);
+                    });
+                } else {
+                    setHasSubscription(true);
+                    setShowPaymentGate(false);
+                }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
+                setHasSubscription(false);
+                setShowPaymentGate(false);
             }
         });
 
@@ -204,6 +243,36 @@ const App: React.FC = () => {
         loadUserData();
     }, [user?.id, showNotification]);
 
+    // Periodic subscription check to prevent bypass
+    useEffect(() => {
+        if (!user?.id || !whopService.isConfigured()) return;
+
+        // Check subscription every 5 minutes
+        const intervalId = setInterval(async () => {
+            console.log('🔄 Periodic subscription check...');
+            const hasActive = await whopService.hasActiveSubscription(user.id);
+            setHasSubscription(hasActive);
+            
+            // If subscription is no longer active, show payment gate
+            if (!hasActive && !showPaymentGate) {
+                setShowPaymentGate(true);
+                showNotification('error', 'Your subscription has expired. Please renew to continue.');
+            }
+        }, 5 * 60 * 1000); // 5 minutes
+
+        return () => clearInterval(intervalId);
+    }, [user?.id, showPaymentGate, showNotification]);
+
+    // Handle onboarding when subscription becomes active
+    useEffect(() => {
+        if (hasSubscription && user?.id && !showPaymentGate) {
+            const hasOnboarded = localStorage.getItem(ONBOARDING_KEY);
+            if (!hasOnboarded) {
+                setShowOnboarding(true);
+            }
+        }
+    }, [hasSubscription, user?.id, showPaymentGate]);
+
     // Track visitor analytics
     useEffect(() => {
         const trackVisitor = async () => {
@@ -242,29 +311,10 @@ const App: React.FC = () => {
 
     const handlePerformLogin = async (userData: { id: string; email: string; name: string }) => {
         try {
-            setUser({
-                id: userData.id,
-                name: userData.name,
-            });
+            // Just close the modal and show success
+            // The onAuthStateChange listener will handle setting user and checking subscription
             setShowLoginModal(false);
             showNotification('success', 'Successfully signed in!');
-            
-            // Check subscription status
-            if (whopService.isConfigured()) {
-                const hasActive = await whopService.hasActiveSubscription(userData.id);
-                setHasSubscription(hasActive);
-                setShowPaymentGate(!hasActive);
-            } else {
-                // If Whop not configured, grant access (development mode)
-                setHasSubscription(true);
-                setShowPaymentGate(false);
-            }
-            
-            // Check if user has completed onboarding
-            const hasOnboarded = localStorage.getItem(ONBOARDING_KEY);
-            if (!hasOnboarded && hasSubscription) {
-                setShowOnboarding(true);
-            }
         } catch (error) {
             console.error('Failed to login:', error);
             showNotification('error', 'Failed to login. Please try again.');

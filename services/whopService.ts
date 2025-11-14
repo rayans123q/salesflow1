@@ -37,34 +37,47 @@ class WhopService {
   // Check if user has active subscription
   async hasActiveSubscription(userId: string): Promise<boolean> {
     if (!this.apiKey) {
-      console.warn('⚠️ Whop not configured, allowing access');
+      console.warn('⚠️ Whop not configured, allowing access (development mode)');
       return true; // Allow access if Whop not configured (for development)
     }
 
     try {
-      // First check database for cached subscription status
-      const settings = await databaseService.getUserSettings(userId);
-      const dbStatus = settings.subscription.status;
-      
-      // If database shows active or trialing, trust it (faster)
-      if (dbStatus === 'active' || dbStatus === 'trialing') {
-        console.log('✅ Subscription active (from database)');
-        return true;
-      }
-      
-      // If database shows inactive/cancelled/expired, verify with Whop API
+      // Always verify with Whop API first for security
       console.log('🔄 Verifying subscription with Whop API...');
-      const subscription = await this.getUserSubscription(userId);
-      const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
       
-      // Update database with latest status
-      if (subscription) {
-        await this.syncSubscriptionToDatabase(userId, subscription);
-      }
-      
+      // Add overall timeout for the entire check
+      const checkPromise = (async () => {
+        const subscription = await this.getUserSubscription(userId);
+        const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+        
+        // Update database with latest status (don't await to avoid blocking)
+        if (subscription) {
+          this.syncSubscriptionToDatabase(userId, subscription).catch(err => 
+            console.error('Failed to sync subscription:', err)
+          );
+        } else {
+          // No subscription found, update database to reflect this
+          databaseService.updateUserSettings(userId, {
+            subscription: {
+              subscribed: false,
+              status: 'inactive',
+            }
+          }).catch(err => console.error('Failed to update subscription status:', err));
+        }
+        
+        return isActive;
+      })();
+
+      const timeoutPromise = new Promise<boolean>((_, reject) => 
+        setTimeout(() => reject(new Error('Subscription check timeout')), 15000)
+      );
+
+      const isActive = await Promise.race([checkPromise, timeoutPromise]);
+      console.log(isActive ? '✅ Subscription active' : '❌ No active subscription');
       return isActive;
     } catch (error) {
       console.error('❌ Failed to check subscription:', error);
+      // On error, deny access for security
       return false;
     }
   }
@@ -91,12 +104,19 @@ class WhopService {
     if (!this.apiKey) return null;
 
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(`${this.baseUrl}/memberships?user_id=${userId}`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Whop API error: ${response.status}`);
@@ -111,7 +131,11 @@ class WhopService {
 
       return null;
     } catch (error) {
-      console.error('❌ Failed to get subscription:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('❌ Whop API timeout');
+      } else {
+        console.error('❌ Failed to get subscription:', error);
+      }
       return null;
     }
   }
