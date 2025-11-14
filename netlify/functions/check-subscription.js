@@ -24,46 +24,26 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // TEMPORARY: Override for known paid users
-    // TODO: Remove this once Whop API is properly configured
-    const paidUsers = [
-      'dateflow4@gmail.com',
-      'rwenzo053@gmail.com',  // Paid user
-      // Add more paid user emails as needed
-    ];
+    const whopApiKey = process.env.VITE_WHOP_API_KEY;
+    const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
 
-    if (paidUsers.includes(userEmail.toLowerCase())) {
-      console.log('✅ Paid user override:', userEmail);
+    if (!whopApiKey) {
+      console.error('❌ Whop API key not configured');
       return {
-        statusCode: 200,
+        statusCode: 500,
         headers,
-        body: JSON.stringify({
-          hasActiveSubscription: true,
-          subscriptionStatus: 'active',
-          membership: {
-            id: 'override',
-            status: 'active',
-            valid: true,
-            expires_at: null
-          }
+        body: JSON.stringify({ 
+          error: 'Whop not configured',
+          hasActiveSubscription: false 
         })
       };
     }
 
-    const whopApiKey = process.env.VITE_WHOP_API_KEY;
-    const whopCompanyId = process.env.VITE_WHOP_COMPANY_ID;
+    console.log('🔍 Checking subscription for:', userEmail);
 
-    if (!whopApiKey || !whopCompanyId) {
-      console.error('Whop credentials not configured');
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Whop not configured' })
-      };
-    }
-
-    // Check user's membership status via Whop API
-    const response = await fetch(`https://api.whop.com/api/v2/memberships`, {
+    // Check user's membership status via Whop API v5
+    const response = await fetch(`https://api.whop.com/api/v5/memberships?email=${encodeURIComponent(userEmail)}`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${whopApiKey}`,
         'Content-Type': 'application/json',
@@ -71,7 +51,23 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
-      console.error('Whop API error:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Whop API error:', response.status, errorText);
+      
+      // If user not found (404), they don't have a subscription
+      if (response.status === 404) {
+        console.log('ℹ️ No subscription found for:', userEmail);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            hasActiveSubscription: false,
+            subscriptionStatus: 'inactive',
+            membership: null
+          })
+        };
+      }
+      
       return {
         statusCode: response.status,
         headers,
@@ -83,13 +79,31 @@ exports.handler = async (event, context) => {
     }
 
     const data = await response.json();
+    console.log('📦 Whop API response:', JSON.stringify(data, null, 2));
     
     // Find active membership for this user
-    const activeMembership = data.data?.find(membership => 
-      membership.email?.toLowerCase() === userEmail.toLowerCase() &&
-      membership.status === 'active' &&
-      !membership.cancel_at_period_end
-    );
+    const memberships = data.data || [];
+    const activeMembership = memberships.find(membership => {
+      const isActive = membership.status === 'active';
+      const notCancelled = !membership.cancel_at_period_end;
+      const isValid = membership.valid !== false;
+      
+      console.log(`🔍 Checking membership ${membership.id}:`, {
+        status: membership.status,
+        isActive,
+        notCancelled,
+        isValid,
+        email: membership.email
+      });
+      
+      return isActive && notCancelled && isValid;
+    });
+
+    if (activeMembership) {
+      console.log('✅ Active subscription found:', activeMembership.id);
+    } else {
+      console.log('❌ No active subscription found');
+    }
 
     return {
       statusCode: 200,
@@ -107,12 +121,14 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Subscription check error:', error);
+    console.error('❌ Subscription check error:', error);
+    console.error('Error details:', error.message, error.stack);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Internal server error',
+        details: error.message,
         hasActiveSubscription: false 
       })
     };

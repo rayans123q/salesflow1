@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Subscription Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        input {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Subscription Check</h1>
+    <p>Enter your email to check subscription status:</p>
+    
+    <input type="email" id="email" placeholder="your@email.com" value="rwenzo053@gmail.com">
+    <button onclick="checkSubscription()">Check Subscription</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function checkSubscription() {
+            const email = document.getElementById('email').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '⏳ Checking subscription...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/check-subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ userEmail: email })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const status = data.hasActiveSubscription ? 'ACTIVE ✅' : 'INACTIVE ❌';
+                    const className = data.hasActiveSubscription ? 'success' : 'error';
+                    
+                    resultDiv.innerHTML = `
+<span class="${className}">Subscription Status: ${status}</span>
+
+Email: ${email}
+Has Active Subscription: ${data.hasActiveSubscription}
+Status: ${data.subscriptionStatus}
+
+Full Response:
+${JSON.stringify(data, null, 2)}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+<span class="error">❌ Error: ${response.status}</span>
+
+${JSON.stringify(data, null, 2)}
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+<span class="error">❌ Request Failed</span>
+
+${error.message}
+                `;
+            }
+        }
+        
+        // Auto-check on load
+        window.onload = () => checkSubscription();
+    </script>
+</body>
+</html>
