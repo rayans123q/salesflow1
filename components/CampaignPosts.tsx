@@ -70,10 +70,9 @@ const PostCard: React.FC<{
                     className={`flex items-center gap-2 font-semibold px-5 py-2 rounded-lg text-sm transition-colors ${
                         hasSubscription 
                             ? 'bg-black/20 dark:bg-white/10 text-[var(--text-secondary)] hover:bg-black/30 dark:hover:bg-white/20' 
-                            : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-600/50 text-gray-400 hover:bg-gray-600/70 cursor-pointer'
                     }`}
-                    disabled={!hasSubscription}
-                    title={!hasSubscription ? 'Subscribe to unlock' : ''}
+                    title={!hasSubscription ? 'Click to subscribe and unlock' : ''}
                 >
                     {!hasSubscription && <LockIcon className="w-4 h-4" />}
                     View on {post.source === 'reddit' ? 'Reddit' : 'Twitter'}
@@ -83,10 +82,10 @@ const PostCard: React.FC<{
                     className={`flex items-center gap-2 font-semibold px-5 py-2 rounded-lg text-sm shadow-md transition-opacity ${
                         hasSubscription
                             ? 'bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white hover:opacity-90 disabled:opacity-50 disabled:from-gray-600 disabled:to-gray-500 disabled:cursor-not-allowed'
-                            : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-600/50 text-gray-400 hover:bg-gray-600/70 cursor-pointer'
                     }`}
-                    disabled={buttonDisabled || !hasSubscription}
-                    title={!hasSubscription ? 'Subscribe to unlock' : ''}
+                    disabled={buttonDisabled && hasSubscription}
+                    title={!hasSubscription ? 'Click to subscribe and unlock' : ''}
                 >
                     {!hasSubscription && <LockIcon className="w-4 h-4" />}
                     {buttonLabel}
