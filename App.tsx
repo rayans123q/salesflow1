@@ -93,6 +93,9 @@ const App: React.FC = () => {
                             console.error('❌ Failed to set session:', error);
                         } else {
                             console.log('✅ Session set successfully:', data.user?.email);
+                            // Force redirect to clean URL after successful OAuth
+                            window.location.href = window.location.origin;
+                            return; // Stop execution, page will reload
                         }
                     } catch (err) {
                         console.error('❌ Error setting session:', err);
