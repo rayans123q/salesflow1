@@ -36,7 +36,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                         data: {
                             name: name.trim() || email.split('@')[0], // Use name from form or email username
                         },
-                        emailRedirectTo: 'https://salesflow1.netlify.app',
+                        emailRedirectTo: `${window.location.origin}`,
                     },
                 });
 
@@ -120,7 +120,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
         try {
             const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://salesflow1.netlify.app/reset-password',
+                redirectTo: `${window.location.origin}/reset-password`,
             });
 
             if (resetError) {
@@ -137,16 +137,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
     const handleGoogleSignIn = async () => {
         setError(null);
+        setLoading(true);
 
         try {
             console.log('🔵 Initiating Google OAuth sign-in...');
-            const redirectUrl = 'https://salesflow1.netlify.app';
-            console.log('🔗 Redirect URL:', redirectUrl);
+            console.log('🔗 Redirect URL:', window.location.origin);
             
             const { data, error: signInError } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: redirectUrl,
+                    redirectTo: window.location.origin,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
@@ -159,19 +159,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
             if (signInError) {
                 console.error('❌ Google OAuth error:', signInError);
                 setError(signInError.message);
+                setLoading(false);
                 return;
             }
 
-            // Check if we got a URL to redirect to
-            if (data?.url) {
-                console.log('✅ Redirecting to Google OAuth URL:', data.url);
-                window.location.href = data.url;
-            } else {
-                console.log('✅ Google OAuth initiated, waiting for redirect...');
-            }
+            console.log('✅ Google OAuth initiated, redirecting...');
+            // User will be redirected to Google, then back to app
+            // The onAuthStateChange listener will handle the rest
         } catch (err) {
             console.error('❌ Google sign-in error:', err);
             setError('Failed to sign in with Google. Please try again.');
+            setLoading(false);
         }
     };
 
