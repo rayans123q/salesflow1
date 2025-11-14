@@ -75,6 +75,18 @@ const App: React.FC = () => {
         // Initialize app - check session and setup auth listener
         const initializeApp = async () => {
             try {
+                // Check if we're coming back from OAuth (hash contains access_token)
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                
+                if (accessToken) {
+                    console.log('🔑 OAuth callback detected with access token');
+                    // Let Supabase handle the OAuth callback
+                    await supabase.auth.getSession();
+                    // Clear the hash from URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+                
                 // Check session with timeout (increased to 5 seconds for OAuth)
                 const timeoutPromise = new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('timeout')), 5000)
