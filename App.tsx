@@ -400,12 +400,12 @@ const App: React.FC = () => {
             // Clear URL parameter
             window.history.replaceState({}, '', '/');
             
-            if (user?.id) {
+            if (user?.email) {
                 // User is logged in, verify subscription
                 showNotification('success', 'Payment successful! Verifying your subscription...');
                 
                 setTimeout(async () => {
-                    const hasActive = await whopService.hasActiveSubscription(user.id);
+                    const hasActive = await whopService.hasActiveSubscription(user.email!);
                     setHasSubscription(hasActive);
                     setShowPaymentGate(!hasActive);
                     
@@ -417,6 +417,8 @@ const App: React.FC = () => {
                         if (!hasOnboarded) {
                             setShowOnboarding(true);
                         }
+                    } else {
+                        showNotification('error', 'Subscription not detected. Please contact support.');
                     }
                 }, 1500);
             } else {
