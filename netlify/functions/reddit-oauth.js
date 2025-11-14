@@ -14,7 +14,23 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { action, clientId, clientSecret, username, password, token, url } = JSON.parse(event.body || '{}');
+    const bodyString = event.body || '{}';
+    console.log('📥 Received request, body length:', bodyString.length);
+    
+    const parsedBody = JSON.parse(bodyString);
+    const { action, clientId, clientSecret, username, password, token, url } = parsedBody;
+    
+    console.log('📋 Parsed request:', {
+      action,
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasUsername: !!username,
+      hasPassword: !!password,
+      hasToken: !!token,
+      tokenType: typeof token,
+      tokenLength: token?.length,
+      hasUrl: !!url
+    });
 
     // Action 1: Get OAuth token
     if (action === 'getToken') {

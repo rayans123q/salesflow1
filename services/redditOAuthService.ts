@@ -173,6 +173,12 @@ class RedditOAuthService {
       // Use Netlify function proxy for API requests
       const proxyUrl = '/.netlify/functions/reddit-oauth';
       
+      // Double-check token before sending
+      if (!token || typeof token !== 'string' || token.trim() === '') {
+        console.error('❌ Token validation failed before sending:', { token, type: typeof token });
+        throw new Error('Invalid token before API request');
+      }
+      
       const requestBody = {
         action: 'apiRequest',
         token: token,
@@ -187,12 +193,15 @@ class RedditOAuthService {
         url: requestBody.url 
       });
       
+      const requestBodyString = JSON.stringify(requestBody);
+      console.log('📦 Request body size:', requestBodyString.length, 'bytes');
+      
       const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: requestBodyString,
       });
 
       if (!response.ok) {
