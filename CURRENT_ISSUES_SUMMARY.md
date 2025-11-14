@@ -47,7 +47,12 @@
 8. ✅ Enhanced error logging and debugging throughout OAuth flow
 
 ## Next Steps:
-1. Wait for Netlify deployment to complete
-2. Hard refresh browser to get latest code
-3. Test login again
-4. If Gemini is overloaded, wait 5-10 minutes before creating campaigns
+1. **CRITICAL:** Add Reddit OAuth environment variables to Netlify (see REDDIT_OAUTH_FIX_STEPS.md)
+2. Trigger new Netlify deployment after adding env vars
+3. Wait for deployment to complete
+4. Hard refresh browser (Ctrl + Shift + R)
+5. Test campaign creation and check for new detailed logs
+
+## Files to Read:
+- **REDDIT_OAUTH_FIX_STEPS.md** - Complete guide to fix Reddit OAuth
+- **TEST_REDDIT_OAUTH.md** - Debugging information and expected logs
