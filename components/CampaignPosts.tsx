@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Campaign, Post, AIStyleSettings } from '../types';
-import { StarIcon, FilterIcon, ClockIcon, CloseIcon, LinkIcon, RedditIcon, TwitterIcon } from '../constants';
+import { StarIcon, FilterIcon, ClockIcon, CloseIcon, LinkIcon, RedditIcon, TwitterIcon, LockIcon } from '../constants';
 import CommentModal from './CommentModal';
 import AiResponseGeneratorModal from './AiResponseGeneratorModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generateComment } from '../services/geminiService';
+import { whopService } from '../services/whopService';
 
 interface CampaignPostsProps {
     campaign: Campaign;
@@ -18,11 +19,18 @@ interface CampaignPostsProps {
     onGenerateAiResponse: () => Promise<boolean>;
     commentHistory: Record<number, string[]>;
     onAddCommentToHistory: (postId: number, comment: string) => Promise<void>;
+    userEmail: string; // Add user email for subscription check
 }
 
-const PostCard: React.FC<{ post: Post, onComment: (post: Post) => void, websiteUrl?: string }> = ({ post, onComment, websiteUrl }) => {
+const PostCard: React.FC<{ 
+    post: Post; 
+    onComment: (post: Post) => void; 
+    onViewPost: (post: Post) => void;
+    websiteUrl?: string;
+    hasSubscription: boolean;
+}> = ({ post, onComment, onViewPost, websiteUrl, hasSubscription }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const buttonLabel = post.status === 'contacted' ? 'Engaged' : 'Generate Comment';
+    const buttonLabel = post.status === 'contacted' ? 'Engaged' : 'Generate AI Comment';
     const buttonDisabled = post.status === 'contacted';
     
     const relevanceColor = post.relevance > 90 ? 'bg-green-500/20 text-green-300' : post.relevance > 80 ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300';
@@ -57,14 +65,30 @@ const PostCard: React.FC<{ post: Post, onComment: (post: Post) => void, websiteU
                         Visit Website
                     </a>
                 )}
-                <a href={post.url} target="_blank" rel="noopener noreferrer" className="bg-black/20 dark:bg-white/10 text-[var(--text-secondary)] font-semibold px-5 py-2 rounded-lg text-sm hover:bg-black/30 dark:hover:bg-white/20 transition-colors">
-                    View on {post.source === 'reddit' ? 'Reddit' : 'Discord'}
-                </a>
+                <button 
+                    onClick={() => onViewPost(post)}
+                    className={`flex items-center gap-2 font-semibold px-5 py-2 rounded-lg text-sm transition-colors ${
+                        hasSubscription 
+                            ? 'bg-black/20 dark:bg-white/10 text-[var(--text-secondary)] hover:bg-black/30 dark:hover:bg-white/20' 
+                            : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!hasSubscription}
+                    title={!hasSubscription ? 'Subscribe to unlock' : ''}
+                >
+                    {!hasSubscription && <LockIcon className="w-4 h-4" />}
+                    View on {post.source === 'reddit' ? 'Reddit' : 'Twitter'}
+                </button>
                  <button 
                     onClick={() => onComment(post)}
-                    className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-semibold px-5 py-2 rounded-lg text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:from-gray-600 disabled:to-gray-500 disabled:cursor-not-allowed"
-                    disabled={buttonDisabled}
+                    className={`flex items-center gap-2 font-semibold px-5 py-2 rounded-lg text-sm shadow-md transition-opacity ${
+                        hasSubscription
+                            ? 'bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white hover:opacity-90 disabled:opacity-50 disabled:from-gray-600 disabled:to-gray-500 disabled:cursor-not-allowed'
+                            : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={buttonDisabled || !hasSubscription}
+                    title={!hasSubscription ? 'Subscribe to unlock' : ''}
                 >
+                    {!hasSubscription && <LockIcon className="w-4 h-4" />}
                     {buttonLabel}
                 </button>
             </div>
@@ -127,7 +151,7 @@ const FilterPopover: React.FC<{
 }
 
 
-const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, onPostContacted, savedAiStyle, setSavedAiStyle, onDeleteCampaign, onRefreshCampaign, onGenerateAiResponse, commentHistory, onAddCommentToHistory }) => {
+const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, onPostContacted, savedAiStyle, setSavedAiStyle, onDeleteCampaign, onRefreshCampaign, onGenerateAiResponse, commentHistory, onAddCommentToHistory, userEmail }) => {
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [isCommentModalOpen, setCommentModalOpen] = useState(false);
     const [isAiModalOpen, setAiModalOpen] = useState(false);
@@ -139,11 +163,51 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [previewText, setPreviewText] = useState('');
     const [refreshResult, setRefreshResult] = useState<number | null>(null);
+    const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+    const [isCheckingSubscription, setIsCheckingSubscription] = useState<boolean>(true);
+
+    // Check subscription status on mount and when user changes
+    useEffect(() => {
+        const checkSubscription = async () => {
+            setIsCheckingSubscription(true);
+            try {
+                const isActive = await whopService.hasActiveSubscription(userEmail);
+                setHasSubscription(isActive);
+                console.log('💳 Subscription status:', isActive ? 'ACTIVE' : 'INACTIVE');
+            } catch (error) {
+                console.error('Failed to check subscription:', error);
+                setHasSubscription(false);
+            } finally {
+                setIsCheckingSubscription(false);
+            }
+        };
+
+        checkSubscription();
+    }, [userEmail]);
 
     const handleOpenCommentModal = (post: Post) => {
+        // Check subscription before opening modal
+        if (!hasSubscription) {
+            console.log('🔒 Subscription required - redirecting to checkout');
+            whopService.redirectToCheckout(userEmail);
+            return;
+        }
+        
         setSelectedPost(post);
         setCommentText('');
         setCommentModalOpen(true);
+    };
+
+    const handleViewPost = (post: Post) => {
+        // Check subscription before allowing view
+        if (!hasSubscription) {
+            console.log('🔒 Subscription required - redirecting to checkout');
+            whopService.redirectToCheckout(userEmail);
+            return;
+        }
+        
+        // Open post in new tab
+        window.open(post.url, '_blank', 'noopener,noreferrer');
     };
 
     const handleCloseCommentModal = () => {
@@ -293,7 +357,13 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                 {filteredPosts.length > 0 ? (
                     filteredPosts.map((post, index) => (
                         <div key={post.id} style={{ animationDelay: `${index * 100}ms` }}>
-                            <PostCard post={post} onComment={() => handleOpenCommentModal(post)} websiteUrl={campaign.websiteUrl} />
+                            <PostCard 
+                                post={post} 
+                                onComment={() => handleOpenCommentModal(post)} 
+                                onViewPost={handleViewPost}
+                                websiteUrl={campaign.websiteUrl} 
+                                hasSubscription={hasSubscription}
+                            />
                         </div>
                     ))
                 ) : (

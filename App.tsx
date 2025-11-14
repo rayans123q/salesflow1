@@ -683,7 +683,7 @@ const App: React.FC = () => {
             case 'FINDING_LEADS':
                 return <FindingLeads campaignData={findingLeadsCampaign} />;
             case 'CAMPAIGN_POSTS':
-                if (selectedCampaign) {
+                if (selectedCampaign && user) {
                      return <CampaignPosts 
                                 campaign={selectedCampaign} 
                                 posts={posts.filter(p => p.campaignId === selectedCampaignId)} 
@@ -696,6 +696,7 @@ const App: React.FC = () => {
                                 onGenerateAiResponse={handleGenerateAiResponse}
                                 commentHistory={commentHistory}
                                 onAddCommentToHistory={handleAddCommentToHistory}
+                                userEmail={user.email}
                             />;
                 }
                 setPage('CAMPAIGNS'); // Fallback

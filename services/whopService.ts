@@ -34,45 +34,33 @@ class WhopService {
     }
   }
 
-  // Check if user has active subscription
-  async hasActiveSubscription(userId: string): Promise<boolean> {
+  // Check if user has active subscription (uses backend verification)
+  async hasActiveSubscription(userEmail: string): Promise<boolean> {
     if (!this.apiKey) {
-      console.warn('⚠️ Whop not configured, allowing access (development mode)');
-      return true; // Allow access if Whop not configured (for development)
+      console.warn('⚠️ Whop not configured, denying access');
+      return false; // Deny access if Whop not configured
     }
 
     try {
-      // Always verify with Whop API first for security
-      console.log('🔄 Verifying subscription with Whop API...');
+      console.log('🔄 Verifying subscription via backend...');
       
-      // Add overall timeout for the entire check - reduced to 5 seconds for faster response
-      const checkPromise = (async () => {
-        const subscription = await this.getUserSubscription(userId);
-        const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-        
-        // Update database with latest status (don't await to avoid blocking)
-        if (subscription) {
-          this.syncSubscriptionToDatabase(userId, subscription).catch(err => 
-            console.error('Failed to sync subscription:', err)
-          );
-        } else {
-          // No subscription found, update database to reflect this
-          databaseService.updateUserSettings(userId, {
-            subscription: {
-              subscribed: false,
-              status: 'inactive',
-            }
-          }).catch(err => console.error('Failed to update subscription status:', err));
-        }
-        
-        return isActive;
-      })();
+      // Call our secure backend function
+      const response = await fetch('/.netlify/functions/check-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userEmail }),
+      });
 
-      const timeoutPromise = new Promise<boolean>((_, reject) => 
-        setTimeout(() => reject(new Error('Subscription check timeout')), 5000)
-      );
+      if (!response.ok) {
+        console.error('❌ Backend subscription check failed:', response.status);
+        return false;
+      }
 
-      const isActive = await Promise.race([checkPromise, timeoutPromise]);
+      const data = await response.json();
+      const isActive = data.hasActiveSubscription;
+      
       console.log(isActive ? '✅ Subscription active' : '❌ No active subscription');
       return isActive;
     } catch (error) {
@@ -165,7 +153,7 @@ class WhopService {
   }
 
   // Get checkout URL for subscription
-  getCheckoutUrl(planId?: string): string {
+  getCheckoutUrl(userEmail: string, planId?: string): string {
     const defaultPlanId = (import.meta as any).env?.VITE_WHOP_PLAN_ID;
     const plan = planId || defaultPlanId;
 
@@ -178,8 +166,20 @@ class WhopService {
     const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const redirectUrl = `${appUrl}/?payment=success`;
 
-    // Construct Whop checkout URL with redirect parameter
-    return `https://whop.com/checkout/${plan}?redirect_url=${encodeURIComponent(redirectUrl)}`;
+    // Construct Whop checkout URL with redirect parameter and email
+    const params = new URLSearchParams({
+      redirect_url: redirectUrl,
+      email: userEmail,
+    });
+
+    return `https://whop.com/checkout/${plan}?${params.toString()}`;
+  }
+
+  // Redirect to checkout page
+  redirectToCheckout(userEmail: string, planId?: string): void {
+    const checkoutUrl = this.getCheckoutUrl(userEmail, planId);
+    console.log('🔗 Redirecting to Whop checkout:', checkoutUrl);
+    window.location.href = checkoutUrl;
   }
 
   // Check if Whop is configured
