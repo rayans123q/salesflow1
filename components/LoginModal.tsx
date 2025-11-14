@@ -7,10 +7,11 @@ interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
     onLogin: (user: { id: string; email: string; name: string }) => void;
+    initialMode?: 'signup' | 'login'; // Add prop to control initial mode
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
-    const [isSignUp, setIsSignUp] = useState(true); // Default to sign-up mode
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initialMode = 'signup' }) => {
+    const [isSignUp, setIsSignUp] = useState(initialMode === 'signup'); // Use initialMode prop
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');

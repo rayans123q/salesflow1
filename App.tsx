@@ -29,6 +29,7 @@ const App: React.FC = () => {
     // Auth State
     const [user, setUser] = useState<User | null>(null);
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [loginMode, setLoginMode] = useState<'signup' | 'login'>('signup');
     const [isLoading, setIsLoading] = useState(true); // Start with loading true to check session
     const [isInitializing, setIsInitializing] = useState(true);
     const isLoggedIn = !!user;
@@ -371,7 +372,8 @@ const App: React.FC = () => {
         }
     }, [theme, user?.id]);
 
-    const handleLogin = () => {
+    const handleLogin = (mode: 'signup' | 'login' = 'signup') => {
+        setLoginMode(mode);
         setShowLoginModal(true);
     };
 
@@ -878,6 +880,7 @@ const App: React.FC = () => {
                     isOpen={showLoginModal} 
                     onClose={() => setShowLoginModal(false)}
                     onLogin={handlePerformLogin}
+                    initialMode={loginMode}
                 />
             </>
         )

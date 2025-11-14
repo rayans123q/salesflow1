@@ -20,18 +20,38 @@ const AnimatedSection: React.FC<{ children: React.ReactNode; className?: string;
 
 
 // Header
-const Header: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-sm">
+const Header: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ onLogin }) => (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-sm border-b border-[var(--border-color)]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-                <div className="text-2xl font-bold text-[var(--text-primary)]">Sales Flow</div>
+                {/* Logo */}
+                <div className="flex items-center gap-3">
+                    <svg className="w-8 h-8" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 10 C30 10, 15 25, 15 45 C15 65, 30 80, 50 80 L50 50 L70 30 L85 45 L70 60 L50 80" 
+                              stroke="url(#gradient)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#8b5cf6" />
+                                <stop offset="100%" stopColor="#a855f7" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span className="text-xl font-bold text-[var(--text-primary)]">Sales Flow</span>
+                </div>
+                
+                {/* Desktop Navigation */}
                 <nav className="hidden md:flex items-center space-x-8">
                     <a href="#features" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Features</a>
                     <a href="#pricing" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Pricing</a>
                     <a href="#story" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Our Story</a>
                 </nav>
-                <button onClick={onLogin} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm font-medium">
-                    Already have an account? <span className="text-[var(--brand-primary)]">Login</span>
+                
+                {/* Login Button - Visible on all screen sizes */}
+                <button 
+                    onClick={() => onLogin('login')} 
+                    className="bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] font-semibold px-4 py-2 rounded-lg hover:bg-black/20 dark:hover:bg-white/10 transition-colors text-sm"
+                >
+                    Login
                 </button>
             </div>
         </div>
@@ -39,7 +59,7 @@ const Header: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
 );
 
 // Hero Section
-const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
+const HeroSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ onLogin }) => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const sectionRef = React.useRef<HTMLElement>(null);
 
@@ -194,7 +214,7 @@ const CalendlyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isO
 };
 
 // Pricing Section
-const PricingSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
+const PricingSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ onLogin }) => {
     const [isCalendlyOpen, setIsCalendlyOpen] = useState(false);
 
     return (
@@ -281,7 +301,7 @@ const Footer: React.FC = () => (
 );
 
 
-const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
+const LandingPage: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ onLogin }) => {
     return (
         <div className="bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
             <Header onLogin={onLogin} />
