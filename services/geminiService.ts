@@ -734,6 +734,13 @@ const findRedditPostsInternal = async (
     // Get the appropriate Reddit credentials (company API if subscribed, user's own if not)
     const effectiveCreds = getRedditCredentials(userHasSubscription, redditCreds);
     
+    console.log('🔍 Reddit credentials check:', {
+        hasSubscription: userHasSubscription,
+        hasEffectiveCreds: !!effectiveCreds,
+        hasClientId: !!effectiveCreds?.clientId,
+        companyCredsAvailable: !!COMPANY_REDDIT_CLIENT_ID
+    });
+    
     // Try Reddit API first if credentials are available
     if (effectiveCreds?.clientId) {
         try {
@@ -892,9 +899,47 @@ const findTwitterPostsInternal = async (
 ): Promise<any[]> => {
     console.log("🐦 Searching Twitter/X for leads...");
     
-    // Note: Twitter API cannot be called from browser due to CORS restrictions
-    // We use Gemini Search as the primary method for Twitter
-    console.log("🔵 Using Gemini Search for Twitter/X (Twitter API requires backend proxy)...");
+    // Try Twitter API first if configured
+    if (twitterService.isConfigured()) {
+        try {
+            console.log("🔵 Using Twitter API for real-time data...");
+            const query = campaign.keywords.join(' OR ');
+            const tweets = await twitterService.searchTweets(query, 20);
+            
+            if (tweets.length > 0) {
+                console.log(`✅ Twitter API found ${tweets.length} tweets`);
+                // Convert to our format and analyze with AI
+                const tweetsForAnalysis = tweets.map(t => ({
+                    postUrl: t.postUrl,
+                    title: t.title,
+                    content: t.content
+                }));
+                
+                // Use AI to score relevance
+                const prompt = `Analyze these tweets and score their relevance (70-100) to: ${campaign.description}
+                Keywords: ${campaign.keywords.join(', ')}
+                Tweets: ${JSON.stringify(tweetsForAnalysis)}
+                Return JSON array with postUrl and relevance score for tweets scoring >= 70.`;
+                
+                const geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                const scoredTweets = parseGeminiResponse(geminiResponse.text);
+                
+                const tweetMap = new Map(tweets.map(t => [t.postUrl, t]));
+                const filteredTweets = scoredTweets.map((scored: any) => {
+                    const original = tweetMap.get(scored.postUrl);
+                    return original ? { ...original, relevance: scored.relevance, subreddit: 'twitter' } : null;
+                }).filter(Boolean);
+                
+                console.log(`✅ Twitter API: Found ${filteredTweets.length} relevant tweets`);
+                return filteredTweets;
+            }
+        } catch (error) {
+            console.error("❌ Twitter API failed:", error);
+            console.log("🔄 Falling back to Gemini Search...");
+        }
+    } else {
+        console.log("⚠️ Twitter API not configured, using Gemini Search...");
+    }
     
     const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
     const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
