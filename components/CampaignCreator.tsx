@@ -36,6 +36,7 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
     const [offer, setOffer] = useState('');
     const [urlForGeneration, setUrlForGeneration] = useState('');
     const [isGeneratingFromUrl, setIsGeneratingFromUrl] = useState(false);
+    const [generationError, setGenerationError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<CampaignDateRange>('lastWeek');
     const [leadSources, setLeadSources] = useState<LeadSource[]>(['reddit']);
 
@@ -94,6 +95,7 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
     const handleGenerateFromUrl = async () => {
         if (!urlForGeneration) return;
         setIsGeneratingFromUrl(true);
+        setGenerationError(null);
         try {
             const result = await generateCampaignDetailsFromUrl(urlForGeneration);
             setOffer(result.description);
@@ -103,7 +105,8 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
             setWebsiteUrl(urlForGeneration); // Also populate the website URL field
         } catch (error) {
             console.error("Failed to generate details from URL", error);
-            // In a real app, you'd show a user-facing error message
+            const errorMessage = error instanceof Error ? error.message : 'Failed to generate campaign details. Please enter details manually.';
+            setGenerationError(errorMessage);
         } finally {
             setIsGeneratingFromUrl(false);
         }
@@ -160,6 +163,11 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
                                         )}
                                     </button>
                                 </div>
+                                {generationError && (
+                                    <div className="mt-2 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                                        {generationError}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="relative">
