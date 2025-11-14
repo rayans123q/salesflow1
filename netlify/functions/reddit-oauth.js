@@ -66,11 +66,22 @@ exports.handler = async (event, context) => {
 
     // Action 2: Make authenticated API request
     if (action === 'apiRequest') {
+      console.log('API Request received:', { hasToken: !!token, tokenLength: token?.length, url });
+      
       if (!token || !url) {
+        console.error('Missing parameters:', { token: token ? 'present' : 'missing', url: url ? 'present' : 'missing' });
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'Missing token or url' })
+          body: JSON.stringify({ 
+            error: 'Missing token or url',
+            debug: {
+              hasToken: !!token,
+              hasUrl: !!url,
+              tokenType: typeof token,
+              urlType: typeof url
+            }
+          })
         };
       }
 

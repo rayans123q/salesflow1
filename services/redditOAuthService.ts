@@ -24,25 +24,41 @@ class RedditOAuthService {
   constructor() {
     const clientId = (import.meta as any).env?.VITE_COMPANY_REDDIT_CLIENT_ID;
     const clientSecret = (import.meta as any).env?.VITE_COMPANY_REDDIT_CLIENT_SECRET;
-    const username = (import.meta as any).env?.VITE_COMPANY_REDDIT_USERNAME;
+    let username = (import.meta as any).env?.VITE_COMPANY_REDDIT_USERNAME;
     const password = (import.meta as any).env?.VITE_COMPANY_REDDIT_PASSWORD;
+
+    // Remove u/ prefix from username if present
+    if (username && username.startsWith('u/')) {
+      username = username.substring(2);
+      console.log('🔧 Removed u/ prefix from Reddit username');
+    }
 
     if (clientId && clientSecret && username && password) {
       this.credentials = { clientId, clientSecret, username, password };
-      console.log('🔑 Reddit OAuth credentials loaded');
+      console.log('🔑 Reddit OAuth credentials loaded successfully');
+      console.log('   Client ID:', clientId?.substring(0, 8) + '...');
+      console.log('   Username:', username);
     } else {
       console.warn('⚠️ Reddit OAuth credentials not found in environment variables');
+      console.warn('   Missing:', {
+        clientId: !clientId,
+        clientSecret: !clientSecret,
+        username: !username,
+        password: !password
+      });
     }
   }
 
   // Get OAuth access token
   private async getAccessToken(): Promise<string> {
     if (!this.credentials) {
-      throw new Error('Reddit OAuth credentials not configured');
+      console.error('❌ Reddit OAuth credentials not configured');
+      throw new Error('Reddit OAuth credentials not configured - check environment variables');
     }
 
     // Check if we have a valid token
     if (this.accessToken && Date.now() < this.accessToken.expiresAt) {
+      console.log('✅ Using cached Reddit OAuth token');
       return this.accessToken.access_token;
     }
 
@@ -52,27 +68,41 @@ class RedditOAuthService {
       // Use Netlify function proxy to avoid CORS
       const proxyUrl = '/.netlify/functions/reddit-oauth';
       
+      const requestBody = {
+        action: 'getToken',
+        clientId: this.credentials.clientId,
+        clientSecret: this.credentials.clientSecret,
+        username: this.credentials.username,
+        password: this.credentials.password,
+      };
+      
+      console.log('📤 Requesting OAuth token from Netlify function');
+      
       const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'getToken',
-          clientId: this.credentials.clientId,
-          clientSecret: this.credentials.clientSecret,
-          username: this.credentials.username,
-          password: this.credentials.password,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Reddit OAuth error:', errorData);
-        throw new Error(`Reddit OAuth failed: ${errorData.error || response.statusText}`);
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text() };
+        }
+        console.error('❌ Reddit OAuth error:', response.status, errorData);
+        throw new Error(`Reddit OAuth failed (${response.status}): ${errorData.error || response.statusText}`);
       }
 
       const data = await response.json();
+      
+      if (!data.access_token) {
+        console.error('❌ No access token in response:', data);
+        throw new Error('Reddit OAuth response missing access_token');
+      }
       
       // Store token with expiration time
       this.accessToken = {
@@ -80,10 +110,12 @@ class RedditOAuthService {
         expiresAt: Date.now() + (data.expires_in * 1000) - 60000, // Subtract 1 minute for safety
       };
 
-      console.log('✅ Reddit OAuth token obtained successfully');
+      console.log('✅ Reddit OAuth token obtained successfully, expires in', data.expires_in, 'seconds');
       return this.accessToken.access_token;
     } catch (error) {
       console.error('❌ Failed to get Reddit OAuth token:', error);
+      // Clear credentials so we don't keep trying
+      this.accessToken = null;
       throw error;
     }
   }
@@ -100,7 +132,20 @@ class RedditOAuthService {
       throw new Error('Reddit OAuth not configured');
     }
 
-    const token = await this.getAccessToken();
+    let token: string;
+    try {
+      token = await this.getAccessToken();
+    } catch (error) {
+      console.error('❌ Failed to get OAuth token:', error);
+      throw new Error(`Failed to get Reddit OAuth token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    if (!token || token.trim() === '') {
+      console.error('❌ OAuth token is empty or invalid');
+      throw new Error('Reddit OAuth token is empty');
+    }
+    
+    console.log(`✅ OAuth token obtained, length: ${token.length}`)
     
     // Build search URL
     const searchParams = new URLSearchParams({
@@ -122,35 +167,51 @@ class RedditOAuthService {
     const url = `${baseUrl}?${searchParams.toString()}`;
 
     console.log(`🔍 Searching Reddit OAuth: ${url}`);
+    console.log(`🔑 Token available: ${token ? 'Yes' : 'No'}, Length: ${token?.length || 0}`);
 
     try {
       // Use Netlify function proxy for API requests
       const proxyUrl = '/.netlify/functions/reddit-oauth';
+      
+      const requestBody = {
+        action: 'apiRequest',
+        token: token,
+        url: url,
+      };
+      
+      console.log('📤 Sending API request to Netlify function:', { 
+        action: requestBody.action, 
+        hasToken: !!requestBody.token, 
+        tokenLength: requestBody.token?.length,
+        tokenPreview: requestBody.token?.substring(0, 10) + '...',
+        url: requestBody.url 
+      });
       
       const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'apiRequest',
-          token: token,
-          url: url,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Reddit API error:', errorData);
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text() };
+        }
+        console.error('❌ Reddit API error:', response.status, errorData);
         
         // If token expired, clear it and retry once
         if (response.status === 401) {
-          console.log('🔄 Token expired, retrying...');
+          console.log('🔄 Token expired, clearing cache and retrying...');
           this.accessToken = null;
           return this.searchReddit(params);
         }
         
-        throw new Error(`Reddit API error: ${errorData.error || response.statusText}`);
+        throw new Error(`Reddit API error (${response.status}): ${errorData.error || response.statusText}`);
       }
 
       const data = await response.json();
