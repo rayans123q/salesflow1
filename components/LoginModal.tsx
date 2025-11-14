@@ -141,17 +141,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
         try {
             console.log('🔵 Initiating Google OAuth sign-in...');
+            console.log('🔗 Redirect URL:', window.location.origin);
             
             const { data, error: signInError } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}`,
+                    redirectTo: window.location.origin,
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
                     },
                 },
             });
+            
+            console.log('📤 OAuth response:', { data, error: signInError });
 
             if (signInError) {
                 console.error('❌ Google OAuth error:', signInError);

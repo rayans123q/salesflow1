@@ -75,13 +75,15 @@ const App: React.FC = () => {
         // Initialize app - check session and setup auth listener
         const initializeApp = async () => {
             try {
-                // Check session with timeout
+                // Check session with timeout (increased to 5 seconds for OAuth)
                 const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('timeout')), 2000)
+                    setTimeout(() => reject(new Error('timeout')), 5000)
                 );
                 const sessionPromise = supabase.auth.getSession();
                 const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
                 const session = result?.data?.session;
+                
+                console.log('🔍 Initial session check:', session ? `User: ${session.user.email}` : 'No session');
                 
                 if (session?.user) {
                     const { data: userData } = await supabase
@@ -800,6 +802,7 @@ const App: React.FC = () => {
     }
 
     if (!isLoggedIn) {
+        console.log('🔴 Not logged in - showing landing page', { user, isLoggedIn, isInitializing });
         return (
             <>
                 <LandingPage onLogin={handleLogin} />
@@ -811,6 +814,8 @@ const App: React.FC = () => {
             </>
         )
     }
+    
+    console.log('✅ User is logged in - showing dashboard', { user: user?.email, isLoggedIn });
 
     // Show payment gate if user doesn't have subscription
     if (showPaymentGate && user?.id) {
