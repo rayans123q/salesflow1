@@ -662,6 +662,33 @@ const normalizeRedditUrl = (url: string): string => {
 // Discord URL normalization removed - only Reddit and Twitter are supported
 
 
+// Validate and normalize Twitter URL
+const normalizeTwitterUrl = (url: string): string => {
+    if (!url || typeof url !== 'string') return '';
+    
+    try {
+        const cleanUrl = url.trim();
+        const parsedUrl = new URL(cleanUrl);
+        
+        // Must be twitter.com or x.com
+        if (!['twitter.com', 'x.com', 'www.twitter.com', 'www.x.com'].includes(parsedUrl.hostname)) {
+            console.warn(`Invalid Twitter URL (wrong domain): ${cleanUrl}`);
+            return '';
+        }
+        
+        // Must have /status/ in path for a valid tweet
+        if (!parsedUrl.pathname.includes('/status/')) {
+            console.warn(`Invalid Twitter URL (not a tweet): ${cleanUrl}`);
+            return '';
+        }
+        
+        return cleanUrl;
+    } catch (e) {
+        console.warn(`Could not parse Twitter URL: ${url}`);
+        return '';
+    }
+};
+
 const processResults = (posts: any[], source: LeadSource): Omit<Post, 'id' | 'campaignId' | 'status'>[] => {
     return posts
         .map(p => {
@@ -669,18 +696,24 @@ const processResults = (posts: any[], source: LeadSource): Omit<Post, 'id' | 'ca
             const url = p.url || p.postUrl;
             if (!url) return null;
 
+            // Validate and normalize URL based on source
             const normalizedUrl = source === 'reddit' 
                 ? normalizeRedditUrl(url) 
+                : source === 'twitter'
+                ? normalizeTwitterUrl(url)
                 : '';
 
             if (!normalizedUrl) {
-                console.warn(`Filtered out ${source} post with invalid URL:`, p.title, url);
+                console.warn(`❌ Filtered out ${source} post with invalid URL:`, p.title?.substring(0, 50), url);
                 return null;
             }
+            
+            console.log(`✅ Valid ${source} post:`, normalizedUrl);
+            
             return {
                 url: normalizedUrl,
                 source: source,
-                sourceName: p.sourceName || p.subreddit,
+                sourceName: p.sourceName || p.subreddit || 'twitter',
                 title: p.title,
                 content: p.content,
                 relevance: p.relevance,
@@ -766,24 +799,39 @@ const findRedditPostsInternal = async (
     const subredditsQuery = campaign.subreddits?.length ? `within these subreddits: ${campaign.subreddits.map(s => `r/${s}`).join(', ')}` : 'across all of Reddit';
     const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
 
-    const prompt = `You are an elite lead qualification expert for Reddit. Use search to find recent Reddit posts that are potential leads.
-      **CAMPAIGN CONTEXT:**
-      - **Product Description:** ${campaign.description}
-      **SEARCH CRITERIA:**
-      - **Topics/Keywords:** ${keywordsQuery}.
-      - **Negative Keywords:** ${negativeKeywordsQuery || 'None.'}
-      - **Subreddits:** Search ${subredditsQuery}.
-      - **Timeframe:** Posts created ${dateQuery}.
-      **INSTRUCTIONS:**
-      1.  **Search & Analyze:** Find up to 10 highly relevant posts.
-      2.  **Score Relevance (0-100):** 90-100 for explicit requests for a matching tool, 70-89 for clear problem descriptions. Exclude any post with a score below 70.
-      3.  **Data Integrity:** The \`postUrl\`, \`subreddit\`, \`title\`, and \`content\` for each object MUST belong to the *same* Reddit post.
-      4.  **Final Output:** Return ONLY a JSON array of post objects for relevant posts (score >= 70).
-      **JSON SCHEMA:**
-      \`\`\`json
-      [ { "postUrl": "full_permalink", "subreddit": "r/subreddit_name", "title": "post_title", "content": "verbatim_post_content_truncated", "relevance": score_from_70_to_100 } ]
-      \`\`\`
-      If no relevant posts are found, return an empty array: \`[]\`.`;
+    const prompt = `You are a lead generation expert. Search Reddit for recent posts where people are discussing problems related to: ${campaign.description}
+
+**SEARCH TASK:**
+Use Google Search with "site:reddit.com" to find posts about: ${keywordsQuery}
+${negativeKeywordsQuery ? `EXCLUDE posts containing: ${campaign.negativeKeywords?.join(', ')}` : ''}
+${campaign.subreddits?.length ? `Focus on subreddits: ${campaign.subreddits.map(s => `r/${s}`).join(', ')}` : 'Search across all Reddit'}
+Timeframe: ${dateQuery}
+
+**CRITICAL REQUIREMENTS:**
+1. Each postUrl MUST be a real, direct Reddit permalink (format: https://www.reddit.com/r/subreddit/comments/abc123/title/)
+2. VERIFY the URL exists and is accessible before including it
+3. The content MUST be the actual post text, not a summary
+4. The subreddit MUST match the URL (e.g., if URL is r/webdev, subreddit should be "r/webdev")
+5. Only include posts where someone is asking for help, describing a problem, or looking for solutions
+6. Score 90-100: Explicitly asking for a tool/solution. Score 70-89: Describing a clear problem
+7. EXCLUDE: promotional posts, spam, irrelevant content, or posts with score below 70
+
+**OUTPUT FORMAT (JSON only):**
+\`\`\`json
+[
+  {
+    "postUrl": "https://www.reddit.com/r/subreddit/comments/abc123/title/",
+    "subreddit": "r/subreddit",
+    "title": "exact post title",
+    "content": "exact post text here",
+    "relevance": 85
+  }
+]
+\`\`\`
+
+If no relevant posts found, return empty array: \`[]\`
+
+IMPORTANT: Only return posts with REAL, VERIFIED URLs. Do not make up or guess URLs.`;
     
     try {
         if (!currentApiKey || currentApiKey === 'PLACEHOLDER_API_KEY') {
@@ -837,59 +885,43 @@ const findTwitterPostsInternal = async (
 ): Promise<any[]> => {
     console.log("🐦 Searching Twitter/X for leads...");
     
-    // Try Twitter API first if configured
-    if (twitterService.isConfigured()) {
-        try {
-            console.log("🔵 Using Twitter API for real-time data...");
-            const searchQuery = campaign.keywords.join(' OR ');
-            const tweets = await twitterService.searchTweets(searchQuery, 10);
-            
-            if (tweets.length > 0) {
-                // Transform Twitter results to our Post format
-                const results = tweets.map(tweet => ({
-                    postUrl: tweet.postUrl,
-                    subreddit: 'twitter', // Using subreddit field for source
-                    title: tweet.title,
-                    content: tweet.content,
-                    author: tweet.author,
-                    relevance: tweet.score,
-                    contacted: false,
-                }));
-                
-                console.log(`✅ Twitter API found ${results.length} tweets`);
-                return results;
-            }
-            
-            console.log('📭 Twitter API returned no tweets, falling back to Gemini Search...');
-        } catch (error) {
-            console.error("❌ Twitter API failed:", error);
-            console.log("🔄 Falling back to Gemini Search for Twitter...");
-        }
-    } else {
-        console.log("⚠️ Twitter API not configured, using Gemini Search...");
-        console.log("💡 Add VITE_TWITTER_BEARER_TOKEN to .env.local for real Twitter API access");
-    }
+    // Note: Twitter API cannot be called from browser due to CORS restrictions
+    // We use Gemini Search as the primary method for Twitter
+    console.log("🔵 Using Gemini Search for Twitter/X (Twitter API requires backend proxy)...");
     
-    // Fallback to Gemini Search
-    console.log("🔵 Using Gemini Search for Twitter/X posts...");
     const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
     const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
     
-    const prompt = `You are an elite lead qualification expert for Twitter/X. Use search to find recent tweets that are potential leads.
-      **CAMPAIGN CONTEXT:**
-      - **Product Description:** ${campaign.description}
-      **SEARCH CRITERIA:**
-      - **Topics/Keywords:** ${keywordsQuery}
-      - **Timeframe:** Tweets created ${dateQuery}
-      **INSTRUCTIONS:**
-      1. **Search & Analyze:** Find up to 10 highly relevant tweets using site:twitter.com or site:x.com
-      2. **Score Relevance (0-100):** 90-100 for explicit requests, 70-89 for clear problems. Exclude below 70.
-      3. **Output:** Return ONLY a JSON array of tweet objects (score >= 70).
-      **JSON SCHEMA:**
-      \`\`\`json
-      [ { "postUrl": "full_tweet_url", "subreddit": "twitter", "title": "Tweet by @username", "content": "tweet_text", "relevance": score_70_to_100 } ]
-      \`\`\`
-      If no relevant tweets found, return: \`[]\`.`;
+    const prompt = `You are a lead generation expert. Search Twitter/X for recent tweets where people are discussing problems related to: ${campaign.description}
+
+**SEARCH TASK:**
+Use Google Search with "site:twitter.com" OR "site:x.com" to find tweets about: ${keywordsQuery}
+Timeframe: ${dateQuery}
+
+**CRITICAL REQUIREMENTS:**
+1. Each tweet URL MUST be a real, direct link to a specific tweet (format: https://twitter.com/username/status/1234567890)
+2. VERIFY the URL exists and is accessible before including it
+3. The content MUST be the actual tweet text, not a summary
+4. Only include tweets where someone is asking for help, describing a problem, or looking for solutions
+5. Score 90-100: Explicitly asking for a tool/solution. Score 70-89: Describing a clear problem
+6. EXCLUDE: promotional tweets, spam, irrelevant content, or tweets with score below 70
+
+**OUTPUT FORMAT (JSON only):**
+\`\`\`json
+[
+  {
+    "postUrl": "https://twitter.com/username/status/1234567890",
+    "subreddit": "twitter",
+    "title": "Tweet by @username",
+    "content": "exact tweet text here",
+    "relevance": 85
+  }
+]
+\`\`\`
+
+If no relevant tweets found, return empty array: \`[]\`
+
+IMPORTANT: Only return tweets with REAL, VERIFIED URLs. Do not make up or guess URLs.`;
     
     try {
         let geminiResponse;
