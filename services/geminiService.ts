@@ -528,15 +528,18 @@ export const generateCampaignDetailsFromUrl = async (url: string): Promise<{ des
 
         return JSON.parse(jsonStr.trim());
     } catch (error) {
+        console.error("Failed to generate campaign details:", error);
+        
+        // Check if it's an overload error (don't retry on overload)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('overloaded') || errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE')) {
+            throw new Error('The AI service is currently overloaded. Please try again in a moment or enter campaign details manually.');
+        }
+        
+        // Only retry on API key errors
         if (handleApiError(error)) {
             // Retry with new key
             return generateCampaignDetailsFromUrl(url);
-        }
-        console.error("Failed to generate campaign details:", error);
-        
-        // Check if it's an overload error
-        if (error instanceof Error && (error.message.includes('overloaded') || error.message.includes('503'))) {
-            throw new Error('The AI service is currently overloaded. Please try again in a moment or enter campaign details manually.');
         }
         
         throw new Error('Failed to generate campaign details from URL. Please enter details manually.');
