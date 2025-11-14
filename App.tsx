@@ -82,27 +82,27 @@ const App: React.FC = () => {
                 
                 if (accessToken) {
                     console.log('🔑 OAuth callback detected, setting session...');
-                    try {
-                        // Set the session from OAuth tokens
-                        const { data, error } = await supabase.auth.setSession({
-                            access_token: accessToken,
-                            refresh_token: refreshToken || '',
-                        });
-                        
+                    
+                    // Set the session from OAuth tokens (non-blocking)
+                    supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken || '',
+                    }).then(({ data, error }) => {
                         if (error) {
                             console.error('❌ Failed to set session:', error);
                         } else {
                             console.log('✅ Session set successfully:', data.user?.email);
-                            // Force redirect to clean URL after successful OAuth
-                            window.location.href = window.location.origin;
-                            return; // Stop execution, page will reload
                         }
-                    } catch (err) {
+                    }).catch(err => {
                         console.error('❌ Error setting session:', err);
-                    }
+                    });
                     
-                    // Clear the hash from URL
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Immediately redirect to clean URL (don't wait for session)
+                    console.log('🔄 Redirecting to clean URL...');
+                    setTimeout(() => {
+                        window.location.href = window.location.origin;
+                    }, 500); // Small delay to ensure session is being set
+                    return; // Stop further execution
                 }
                 
                 // Check session with timeout (increased to 5 seconds for OAuth)
