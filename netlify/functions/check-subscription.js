@@ -84,9 +84,13 @@ exports.handler = async (event, context) => {
     const data = await response.json();
     console.log(`📦 Whop API response - Total memberships:`, data.data?.length || 0);
     
-    // Find active membership for this user
+    // Log all emails in memberships for debugging
     const memberships = data.data || [];
+    const allEmails = memberships.map(m => m.email || m.user?.email || 'no-email').filter(e => e !== 'no-email');
+    console.log(`📧 Emails in Whop:`, allEmails);
+    console.log(`🔍 Looking for:`, userEmail.toLowerCase());
     
+    // Find active membership for this user
     const activeMembership = memberships.find(membership => {
       // Check if email matches (case insensitive)
       const memberEmail = membership.email || membership.user?.email || '';
