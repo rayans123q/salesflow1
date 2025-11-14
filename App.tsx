@@ -119,14 +119,51 @@ const App: React.FC = () => {
         initializeApp();
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
                 const newUser = {
                     id: session.user.id,
-                    name: session.user.user_metadata?.name || 'User',
+                    name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
                     email: session.user.email,
                     role: 'user',
                 };
+                
+                // CRITICAL: Ensure user exists in database
+                try {
+                    console.log('👤 Ensuring user exists in database:', newUser.email);
+                    
+                    // Check if user exists
+                    const { data: existingUser, error: checkError } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('id', newUser.id)
+                        .single();
+                    
+                    if (checkError && checkError.code === 'PGRST116') {
+                        // User doesn't exist, create them
+                        console.log('➕ Creating new user in database...');
+                        const { error: insertError } = await supabase
+                            .from('users')
+                            .insert({
+                                id: newUser.id,
+                                email: newUser.email,
+                                name: newUser.name,
+                                role: 'user',
+                                created_at: new Date().toISOString(),
+                            });
+                        
+                        if (insertError) {
+                            console.error('❌ Failed to create user:', insertError);
+                        } else {
+                            console.log('✅ User created successfully in database');
+                        }
+                    } else if (existingUser) {
+                        console.log('✅ User already exists in database');
+                    }
+                } catch (error) {
+                    console.error('❌ Error ensuring user exists:', error);
+                }
+                
                 setUser(newUser);
                 
                 // Grant access to all users (payment gate disabled)
