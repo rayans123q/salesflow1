@@ -119,7 +119,7 @@ const App: React.FC = () => {
         initializeApp();
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
                 const newUser = {
                     id: session.user.id,
@@ -128,47 +128,48 @@ const App: React.FC = () => {
                     role: 'user',
                 };
                 
-                // CRITICAL: Ensure user exists in database
-                try {
-                    console.log('👤 Ensuring user exists in database:', newUser.email);
-                    
-                    // Check if user exists
-                    const { data: existingUser, error: checkError } = await supabase
-                        .from('users')
-                        .select('id')
-                        .eq('id', newUser.id)
-                        .single();
-                    
-                    if (checkError && checkError.code === 'PGRST116') {
-                        // User doesn't exist, create them
-                        console.log('➕ Creating new user in database...');
-                        const { error: insertError } = await supabase
-                            .from('users')
-                            .insert({
-                                id: newUser.id,
-                                email: newUser.email,
-                                name: newUser.name,
-                                role: 'user',
-                                created_at: new Date().toISOString(),
-                            });
-                        
-                        if (insertError) {
-                            console.error('❌ Failed to create user:', insertError);
-                        } else {
-                            console.log('✅ User created successfully in database');
-                        }
-                    } else if (existingUser) {
-                        console.log('✅ User already exists in database');
-                    }
-                } catch (error) {
-                    console.error('❌ Error ensuring user exists:', error);
-                }
-                
+                // Set user state immediately (non-blocking)
                 setUser(newUser);
-                
-                // Grant access to all users (payment gate disabled)
                 setHasSubscription(true);
                 setShowPaymentGate(false);
+                
+                // Ensure user exists in database (background, non-blocking)
+                (async () => {
+                    try {
+                        console.log('👤 Ensuring user exists in database:', newUser.email);
+                        
+                        // Check if user exists
+                        const { data: existingUser, error: checkError } = await supabase
+                            .from('users')
+                            .select('id')
+                            .eq('id', newUser.id)
+                            .single();
+                        
+                        if (checkError && checkError.code === 'PGRST116') {
+                            // User doesn't exist, create them
+                            console.log('➕ Creating new user in database...');
+                            const { error: insertError } = await supabase
+                                .from('users')
+                                .insert({
+                                    id: newUser.id,
+                                    email: newUser.email,
+                                    name: newUser.name,
+                                    role: 'user',
+                                    created_at: new Date().toISOString(),
+                                });
+                            
+                            if (insertError) {
+                                console.error('❌ Failed to create user:', insertError);
+                            } else {
+                                console.log('✅ User created successfully in database');
+                            }
+                        } else if (existingUser) {
+                            console.log('✅ User already exists in database');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error ensuring user exists:', error);
+                    }
+                })();
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 setHasSubscription(false);
