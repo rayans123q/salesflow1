@@ -180,7 +180,7 @@ const App: React.FC = () => {
                 
                 setShowPaymentGate(false);
                 
-                // Ensure user exists in database (background, non-blocking)
+                // Ensure user exists in database (BLOCKING - must complete before user can create campaigns)
                 (async () => {
                     try {
                         console.log('👤 Ensuring user exists in database:', newUser.email);
@@ -207,6 +207,22 @@ const App: React.FC = () => {
                             
                             if (insertError) {
                                 console.error('❌ Failed to create user:', insertError);
+                                // Retry once if it fails
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                const { error: retryError } = await supabase
+                                    .from('users')
+                                    .insert({
+                                        id: newUser.id,
+                                        email: newUser.email,
+                                        name: newUser.name,
+                                        role: 'user',
+                                        created_at: new Date().toISOString(),
+                                    });
+                                if (retryError) {
+                                    console.error('❌ Retry failed:', retryError);
+                                } else {
+                                    console.log('✅ User created successfully on retry');
+                                }
                             } else {
                                 console.log('✅ User created successfully in database');
                             }
@@ -558,7 +574,15 @@ const App: React.FC = () => {
 
         } catch (error) {
             console.error("❌ Failed to create campaign:", error);
-            showNotification('error', `Failed to create campaign. Please try again.`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error("❌ Error details:", errorMessage);
+            
+            // Check if it's a user not found error
+            if (errorMessage.includes('user') || errorMessage.includes('foreign key')) {
+                showNotification('error', 'Please wait a moment and try again. Your account is still being set up.');
+            } else {
+                showNotification('error', `Failed to create campaign: ${errorMessage}`);
+            }
             setPage('CREATE_CAMPAIGN');
         } finally {
             setFindingLeadsCampaign(null);
