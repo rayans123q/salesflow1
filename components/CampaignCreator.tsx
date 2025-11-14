@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Campaign, CampaignDateRange, LeadSource } from '../types';
-import { CloseIcon, DiscordIcon, RedditIcon, SearchIcon, SparkleIcon } from '../constants';
+import { CloseIcon, RedditIcon, SearchIcon, SparkleIcon, TwitterIcon } from '../constants';
 import { generateCampaignDetailsFromUrl } from '../services/geminiService';
 
 interface CampaignCreatorProps {
@@ -181,13 +181,13 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
                                         </div>
                                     </button>
                                     <button
-                                        onClick={() => handleLeadSourceToggle('discord')}
-                                        className={`flex items-center gap-3 p-4 rounded-lg border-2 w-full transition-all duration-200 ${leadSources.includes('discord') ? 'border-[var(--brand-primary)] bg-violet-500/10' : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-gray-500'}`}
+                                        onClick={() => handleLeadSourceToggle('twitter')}
+                                        className={`flex items-center gap-3 p-4 rounded-lg border-2 w-full transition-all duration-200 ${leadSources.includes('twitter') ? 'border-[var(--brand-primary)] bg-violet-500/10' : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:border-gray-500'}`}
                                     >
-                                        <DiscordIcon className="w-6 h-6 text-indigo-400" />
+                                        <TwitterIcon className="w-6 h-6 text-sky-400" />
                                         <div>
-                                            <p className={`font-semibold ${leadSources.includes('discord') ? 'text-[var(--text-primary)]' : 'text-gray-300'}`}>Discord</p>
-                                            <p className="text-sm text-[var(--text-secondary)] text-left">Scan public channels</p>
+                                            <p className={`font-semibold ${leadSources.includes('twitter') ? 'text-[var(--text-primary)]' : 'text-gray-300'}`}>X / Twitter</p>
+                                            <p className="text-sm text-[var(--text-secondary)] text-left">Find tweets and replies</p>
                                         </div>
                                     </button>
                                 </div>

@@ -989,14 +989,6 @@ export const findLeads = async (
         );
     }
 
-    if (campaign.leadSources.includes('discord')) {
-        promises.push(
-            findDiscordMessagesInternal(campaign)
-                .then(messages => processResults(messages, 'discord'))
-                .catch(err => { console.error("Error finding Discord messages:", err); return []; })
-        );
-    }
-
     if (campaign.leadSources.includes('twitter')) {
         promises.push(
             findTwitterPostsInternal(campaign)

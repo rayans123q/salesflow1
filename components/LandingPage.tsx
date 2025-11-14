@@ -102,7 +102,7 @@ const HeroSection: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)]">Effortlessly.</span>
                     </h1>
                     <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-200 mb-10 drop-shadow-md">
-                        Sales Flow scans Reddit and Discord for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
+                        Sales Flow scans Reddit and X/Twitter for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
                     </p>
                     <div className="flex flex-col items-center gap-4">
                         <button onClick={onLogin} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
@@ -261,7 +261,7 @@ const StorySection: React.FC = () => (
                 <div className="max-w-3xl mx-auto text-center">
                     <h2 className="text-3xl md:text-4xl font-bold mb-6">Our Story</h2>
                     <div className="prose prose-lg text-[var(--text-secondary)] mx-auto space-y-4">
-                        <p>Sales Flow was born from a simple frustration: finding customers on social media is powerful, but it's a massive time sink. We spent countless hours manually searching subreddits and Discord channels, trying to find people who needed our products.</p>
+                        <p>Sales Flow was born from a simple frustration: finding customers on social media is powerful, but it's a massive time sink. We spent countless hours manually searching subreddits and X/Twitter, trying to find people who needed our products.</p>
                         <p>We knew there had to be a better way. So, we built Sales Flow to automate the grunt work. By leveraging the power of AI to scan, filter, and even help with the initial outreach, we've turned a multi-hour daily task into a few minutes of campaign management. Our mission is to help you connect with your future customers where they are, without losing your sanity.</p>
                     </div>
                 </div>

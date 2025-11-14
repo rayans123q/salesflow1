@@ -5,7 +5,7 @@ export type CampaignDateRange = 'lastDay' | 'lastWeek' | 'lastMonth';
 
 export type Theme = 'light' | 'dark';
 
-export type LeadSource = 'reddit' | 'discord' | 'twitter';
+export type LeadSource = 'reddit' | 'twitter';
 
 export interface User {
   id?: string;
