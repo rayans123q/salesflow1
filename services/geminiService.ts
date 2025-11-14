@@ -419,8 +419,8 @@ export const generateComment = async (
   campaign: Campaign,
   styleSettings: AIStyleSettings
 ): Promise<string> => {
-  const platformAuthenticity = post.source === 'discord'
-      ? `For Discord, use natural, conversational language. Emojis can be used to add personality. Avoid @mentions unless necessary. Keep messages relatively concise for a chat environment.`
+  const platformAuthenticity = post.source === 'twitter'
+      ? `For X/Twitter, use concise, engaging language. Keep it under 280 characters if possible. Use natural tone and avoid overly promotional language.`
       : `For Reddit, use natural language. Use platform-specific formatting (like *italics* for emphasis) if appropriate. Be mindful of subreddit-specific rules and etiquette.`;
 
   const prompt = `
@@ -650,42 +650,7 @@ const normalizeRedditUrl = (url: string): string => {
     }
 };
 
-const normalizeDiscordUrl = (url: string): string => {
-    if (!url || typeof url !== 'string') {
-        return '';
-    }
-    let cleanUrl = url.trim();
-
-    // Handle URLs missing a protocol
-    if (!/^(https?:)?\/\//i.test(cleanUrl)) {
-        cleanUrl = `https://${cleanUrl}`;
-    }
-    
-    try {
-        const parsedUrl = new URL(cleanUrl);
-
-        // Rule 1: Must be a discord.com domain.
-        if (parsedUrl.hostname !== 'discord.com') {
-            console.warn(`URL is not from Discord, filtering out: ${cleanUrl}`);
-            return '';
-        }
-
-        // Rule 2: Must be a link to a message.
-        // Pathname must be /channels/server_id/channel_id/message_id
-        const pathRegex = /^\/channels\/\d+\/\d+\/\d+$/;
-        if (!pathRegex.test(parsedUrl.pathname)) {
-            console.warn(`URL is not a Discord message link (invalid path), filtering out: ${cleanUrl}`);
-            return '';
-        }
-
-        // Reconstruct a clean URL to remove trackers and hash.
-        return `${parsedUrl.origin}${parsedUrl.pathname}`;
-
-    } catch (e) {
-        console.warn(`Could not parse invalid Discord URL, filtering out: ${cleanUrl}`);
-        return ''; // Invalid URL format
-    }
-};
+// Discord URL normalization removed - only Reddit and Twitter are supported
 
 
 const processResults = (posts: any[], source: LeadSource): Omit<Post, 'id' | 'campaignId' | 'status'>[] => {
@@ -697,9 +662,7 @@ const processResults = (posts: any[], source: LeadSource): Omit<Post, 'id' | 'ca
 
             const normalizedUrl = source === 'reddit' 
                 ? normalizeRedditUrl(url) 
-                : source === 'discord' 
-                    ? normalizeDiscordUrl(url) 
-                    : '';
+                : '';
 
             if (!normalizedUrl) {
                 console.warn(`Filtered out ${source} post with invalid URL:`, p.title, url);
@@ -860,76 +823,7 @@ const findRedditPostsInternal = async (
     }
 };
 
-const findDiscordMessagesInternal = async (
-    campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>
-): Promise<any[]> => {
-    console.log("Using Google Search via Gemini for Discord messages...");
-    const keywordsQuery = campaign.keywords.map(kw => `"${kw}"`).join(' OR ');
-    const negativeKeywordsQuery = campaign.negativeKeywords?.length ? ` (excluding messages with these keywords: ${campaign.negativeKeywords.join(', ')})` : '';
-    const dateQuery = { lastDay: 'within the last 24 hours', lastWeek: 'within the last 7 days', lastMonth: 'within the last month' }[campaign.dateRange];
-
-    const prompt = `You are an elite lead qualification expert for Discord. Use search to find recent, public Discord messages that are potential leads.
-      **CAMPAIGN CONTEXT:**
-      - **Product Description:** ${campaign.description}
-      **SEARCH CRITERIA:**
-      - **Topics/Keywords:** Find messages discussing: ${keywordsQuery}. Use search terms like "site:discord.com" to focus your search.
-      - **Negative Keywords:** ${negativeKeywordsQuery || 'None.'}
-      - **Timeframe:** Messages created ${dateQuery}.
-      - **Message Quality:** Focus on messages where a user is describing a problem or asking for help in a public, indexable channel.
-      **INSTRUCTIONS:**
-      1.  **Search & Analyze:** Find up to 10 highly relevant messages.
-      2.  **Score Relevance (0-100):** 90-100 for explicit requests for a matching tool, 70-89 for clear problem descriptions. Exclude any message with a score below 70.
-      3.  **Data Integrity:** The \`url\` MUST be a direct permalink to the specific message (e.g., https://discord.com/channels/server_id/channel_id/message_id). Do not provide generic channel URLs. All data points (\`url\`, \`sourceName\`, \`title\`, \`content\`) must belong to the *same* Discord message.
-      4.  **Final Output:** Return ONLY a JSON array of message objects for relevant messages (score >= 70).
-      **JSON SCHEMA:**
-      \`\`\`json
-      [ { "url": "direct_and_public_permalink_to_the_specific_message", "sourceName": "ServerName#channel", "title": "Concise title, e.g., 'Message from username'", "content": "verbatim_message_content_truncated", "relevance": score_from_70_to_100 } ]
-      \`\`\`
-      If no relevant messages are found, return an empty array: \`[]\`.`;
-        
-    try {
-        if (!currentApiKey || currentApiKey === 'PLACEHOLDER_API_KEY') {
-            console.error("❌ Gemini API key not configured. Please add GEMINI_API_KEY to your .env.local file.");
-            throw new Error('Gemini API key is required. Please configure it in your environment variables.');
-        }
-        console.log("🤖 Using Gemini AI for Discord search with API key...");
-        
-        // Try with gemini-2.5-pro first, fallback to gemini-2.5-flash if overloaded
-        let geminiResponse;
-        try {
-            geminiResponse = await ai.models.generateContent({ 
-                model: "gemini-2.5-pro", 
-                contents: prompt, 
-                config: { tools: [{googleSearch: {}}] } 
-            });
-        } catch (proError: any) {
-            if (proError?.message?.includes('503') || proError?.message?.includes('overloaded')) {
-                console.warn("⚠️ Gemini Pro model overloaded, trying Flash model...");
-                geminiResponse = await ai.models.generateContent({ 
-                    model: "gemini-2.5-flash", 
-                    contents: prompt, 
-                    config: { tools: [{googleSearch: {}}] } 
-                });
-            } else {
-                throw proError;
-            }
-        }
-        
-        return parseGeminiResponse(geminiResponse.text);
-    } catch (error) {
-        console.error("❌ Discord search failed:", error);
-        if (error instanceof Error) {
-            if (error.message.includes('503') || error.message.includes('overloaded')) {
-                console.warn("⚠️ Both Gemini models are overloaded. Please try again in a few moments.");
-                return [];
-            }
-            if (error.message.includes('API key') || error.message.includes('quota')) {
-                throw new Error('Gemini API error: ' + error.message);
-            }
-        }
-        return [];
-    }
-};
+// Discord support removed - only Reddit and Twitter are supported now
 
 const findTwitterPostsInternal = async (
     campaign: Omit<Campaign, 'id' | 'status' | 'leadsFound' | 'highPotential' | 'contacted' | 'createdAt' | 'lastRefreshed'>
