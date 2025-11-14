@@ -52,17 +52,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     if (data.user.email_confirmed_at) {
                         // User is immediately confirmed - grant access (no payment required)
                         console.log('✅ Sign up successful, granting access...');
-                        // Clear loading state immediately
-                        setLoading(false);
                         try {
                             onLogin({
                                 id: data.user.id,
                                 email: data.user.email!,
                                 name: data.user.user_metadata?.name || name.trim() || data.user.email!.split('@')[0],
                             });
+                            console.log('✅ onLogin callback completed');
                         } catch (loginError) {
                             console.error('❌ onLogin callback error:', loginError);
-                            // Don't show error to user, auth was successful
+                        } finally {
+                            // Always clear loading state
+                            setLoading(false);
                         }
                     } else {
                         // Email confirmation required
@@ -70,6 +71,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                         setLoading(false);
                         setIsSignUp(false); // Switch to sign in mode
                     }
+                } else {
+                    // No user returned
+                    setError('Sign up failed. Please try again.');
+                    setLoading(false);
                 }
             } else {
                 // Sign in
