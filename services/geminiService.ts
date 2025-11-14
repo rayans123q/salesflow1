@@ -52,27 +52,28 @@ const COMPANY_REDDIT_CLIENT_ID = (import.meta as any).env?.VITE_COMPANY_REDDIT_C
 const COMPANY_REDDIT_CLIENT_SECRET = (import.meta as any).env?.VITE_COMPANY_REDDIT_CLIENT_SECRET;
 
 // Helper function to get Reddit credentials
-// Returns company credentials if user has subscription, otherwise user's own credentials
+// Priority: 1) Company credentials (always available), 2) User's own credentials
 export const getRedditCredentials = (
   userHasSubscription: boolean,
   userCreds: RedditCredentials | null
 ): RedditCredentials | null => {
-  // If user has active subscription, use company credentials
-  if (userHasSubscription && COMPANY_REDDIT_CLIENT_ID) {
-    console.log('🔑 Using company Reddit API (subscribed user)');
+  // Always try company credentials first (available to all users)
+  if (COMPANY_REDDIT_CLIENT_ID) {
+    console.log('🔑 Using company Reddit API credentials');
     return {
       clientId: COMPANY_REDDIT_CLIENT_ID,
       clientSecret: COMPANY_REDDIT_CLIENT_SECRET || undefined,
     };
   }
   
-  // Otherwise, use user's own credentials if provided
+  // Fallback to user's own credentials if provided
   if (userCreds?.clientId) {
-    console.log('🔑 Using user Reddit API credentials');
+    console.log('🔑 Using user-provided Reddit API credentials');
     return userCreds;
   }
   
   // No credentials available
+  console.warn('⚠️ No Reddit API credentials available (neither company nor user)');
   return null;
 };
 
