@@ -11,6 +11,19 @@ interface ConfirmationModalProps {
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, confirmButtonText = 'Confirm', confirmButtonVariant = 'danger' }) => {
+    // Scroll to top and lock body scroll when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const confirmButtonClasses = confirmButtonVariant === 'primary'
@@ -18,7 +31,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
         : 'bg-red-600 hover:bg-red-500';
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
             <div className="bg-[var(--bg-secondary)] w-full max-w-md rounded-2xl p-8 border border-[var(--border-color)] shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
                 <h2 className="text-xl font-bold mb-4 text-[var(--text-primary)]">{title}</h2>
                 <p className="text-[var(--text-secondary)] mb-8">{message}</p>

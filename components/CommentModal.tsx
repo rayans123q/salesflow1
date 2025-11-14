@@ -16,6 +16,15 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
     const [copied, setCopied] = useState(false);
     const [isHistoryVisible, setIsHistoryVisible] = useState(false);
 
+    // Scroll to top and lock body scroll when modal opens
+    React.useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
+
     const handleCopy = () => {
         navigator.clipboard.writeText(commentText).then(() => {
             setCopied(true);
