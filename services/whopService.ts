@@ -36,6 +36,11 @@ class WhopService {
 
   // Check if user has active subscription (uses backend verification)
   async hasActiveSubscription(userEmail: string): Promise<boolean> {
+    // TEMPORARY: Grant access to all users (payment gate disabled)
+    console.log('✅ Free access granted to all users');
+    return true;
+    
+    /* ORIGINAL CODE - Uncomment when you want to enable payment gate
     if (!this.apiKey) {
       console.warn('⚠️ Whop not configured, denying access');
       return false; // Deny access if Whop not configured
@@ -85,6 +90,7 @@ class WhopService {
       // On error, deny access for security
       return false;
     }
+    */
   }
 
   // Sync Whop subscription data to database
