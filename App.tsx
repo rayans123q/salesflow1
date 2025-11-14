@@ -83,26 +83,29 @@ const App: React.FC = () => {
                 if (accessToken) {
                     console.log('🔑 OAuth callback detected, setting session...');
                     
-                    // Set the session from OAuth tokens (non-blocking)
-                    supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken || '',
-                    }).then(({ data, error }) => {
+                    // Set the session from OAuth tokens and wait for it
+                    try {
+                        const { data, error } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken || '',
+                        });
+                        
                         if (error) {
                             console.error('❌ Failed to set session:', error);
                         } else {
                             console.log('✅ Session set successfully:', data.user?.email);
+                            
+                            // Store a flag to indicate we just logged in
+                            sessionStorage.setItem('just_logged_in', 'true');
+                            
+                            // Redirect to clean URL after session is set
+                            console.log('🔄 Redirecting to dashboard...');
+                            window.location.href = window.location.origin;
+                            return; // Stop further execution
                         }
-                    }).catch(err => {
+                    } catch (err) {
                         console.error('❌ Error setting session:', err);
-                    });
-                    
-                    // Immediately redirect to clean URL (don't wait for session)
-                    console.log('🔄 Redirecting to clean URL...');
-                    setTimeout(() => {
-                        window.location.href = window.location.origin;
-                    }, 500); // Small delay to ensure session is being set
-                    return; // Stop further execution
+                    }
                 }
                 
                 // Check session with timeout (increased to 5 seconds for OAuth)
@@ -855,7 +858,14 @@ const App: React.FC = () => {
         );
     }
 
-    if (!isLoggedIn) {
+    // Check if user just logged in (from OAuth redirect)
+    const justLoggedIn = sessionStorage.getItem('just_logged_in');
+    if (justLoggedIn) {
+        sessionStorage.removeItem('just_logged_in');
+        console.log('🔄 Just logged in, waiting for session to load...');
+    }
+
+    if (!isLoggedIn && !justLoggedIn) {
         console.log('🔴 Not logged in - showing landing page', { user, isLoggedIn, isInitializing });
         return (
             <>
