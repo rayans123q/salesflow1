@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Campaign } from '../types';
-import { RedditIcon, DiscordIcon, TrashIcon } from '../constants';
+import { RedditIcon, TwitterIcon, TrashIcon } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
 
 interface CampaignsListProps {
@@ -47,7 +47,7 @@ const CampaignCard: React.FC<{ campaign: Campaign; onViewPosts: (id: number) => 
                         {campaign.leadSources.map(source => (
                             <span key={source} className="bg-gray-700 text-gray-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1.5">
                                 {source === 'reddit' && <RedditIcon className="w-4 h-4 text-orange-500"/>}
-                                {source === 'discord' && <DiscordIcon className="w-4 h-4 text-indigo-400"/>}
+                                {source === 'twitter' && <TwitterIcon className="w-4 h-4 text-sky-400"/>}
                                 {source.charAt(0).toUpperCase() + source.slice(1)}
                             </span>
                         ))}

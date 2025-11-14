@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Campaign, Post, AIStyleSettings } from '../types';
-import { StarIcon, FilterIcon, ClockIcon, CloseIcon, LinkIcon, RedditIcon, DiscordIcon } from '../constants';
+import { StarIcon, FilterIcon, ClockIcon, CloseIcon, LinkIcon, RedditIcon, TwitterIcon } from '../constants';
 import CommentModal from './CommentModal';
 import AiResponseGeneratorModal from './AiResponseGeneratorModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -33,7 +33,7 @@ const PostCard: React.FC<{ post: Post, onComment: (post: Post) => void, websiteU
                 <div className="flex justify-between items-start gap-4 mb-4">
                     <div className="flex items-center gap-2 min-w-0">
                         {post.source === 'reddit' && <RedditIcon className="w-5 h-5 text-orange-500 flex-shrink-0" />}
-                        {post.source === 'discord' && <DiscordIcon className="w-5 h-5 text-indigo-400 flex-shrink-0" />}
+                        {post.source === 'twitter' && <TwitterIcon className="w-5 h-5 text-sky-400 flex-shrink-0" />}
                         <p className="font-semibold text-[var(--text-primary)] text-opacity-80 truncate">{post.sourceName}</p>
                     </div>
                     <div className={`flex items-center gap-2 font-bold px-3 py-1.5 rounded-full text-sm ${relevanceColor} flex-shrink-0`}>
