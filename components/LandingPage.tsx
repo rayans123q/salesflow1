@@ -58,6 +58,40 @@ const Header: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ on
     </header>
 );
 
+// Rotating Text Component
+const RotatingText: React.FC = () => {
+    const words = [
+        { text: 'Reddit', color: 'from-orange-500 to-red-500' },
+        { text: 'Twitter', color: 'from-blue-400 to-cyan-400' },
+        { text: 'Social Media', color: 'from-purple-500 to-pink-500' },
+    ];
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            setIsAnimating(true);
+            setTimeout(() => {
+                setCurrentIndex((prev) => (prev + 1) % words.length);
+                setIsAnimating(false);
+            }, 500);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <span className="inline-block relative">
+            <span
+                className={`text-transparent bg-clip-text bg-gradient-to-r ${words[currentIndex].color} transition-all duration-500 ${
+                    isAnimating ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'
+                }`}
+            >
+                {words[currentIndex].text}
+            </span>
+        </span>
+    );
+};
+
 // Hero Section
 const HeroSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = ({ onLogin }) => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -117,17 +151,35 @@ const HeroSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = 
             
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
                 <AnimatedSection>
-                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-6 drop-shadow-lg">
-                        Find B2B Leads on Social Media, <br/>
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)]">Effortlessly.</span>
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 drop-shadow-2xl leading-tight">
+                        Find B2B Leads on <br/>
+                        <RotatingText />{' '}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 animate-gradient">
+                            Effortlessly
+                        </span>
                     </h1>
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-200 mb-10 drop-shadow-md">
-                        Sales Flow scans Reddit and X/Twitter for you, finds potential customers talking about problems you solve, and helps you engage with AI-powered, natural-sounding comments.
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-300 mb-10 drop-shadow-md leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        Sales Flow scans <span className="text-white font-semibold">Reddit</span> and <span className="text-white font-semibold">X/Twitter</span> for you, finds potential customers talking about problems you solve, and helps you engage with <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400">AI-powered</span>, natural-sounding comments.
                     </p>
-                    <div className="flex flex-col items-center gap-4">
-                        <button onClick={onLogin} className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white font-bold px-8 py-4 rounded-lg shadow-lg text-lg hover:scale-105 transition-transform">
-                            Get Started
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                        <button 
+                            onClick={onLogin} 
+                            className="group relative bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-10 py-4 rounded-xl shadow-2xl text-lg hover:shadow-violet-500/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1 overflow-hidden"
+                        >
+                            <span className="relative z-10 flex items-center gap-2">
+                                Get Started Free
+                                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         </button>
+                        <a 
+                            href="#features" 
+                            className="text-white font-semibold px-8 py-4 rounded-xl border-2 border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-300 backdrop-blur-sm"
+                        >
+                            Learn More
+                        </a>
                     </div>
                 </AnimatedSection>
             </div>
