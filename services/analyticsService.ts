@@ -83,7 +83,7 @@ class AnalyticsService {
     try {
       const utmParams = getUTMParams();
       
-      await supabase.from('analytics_events').insert({
+      const { data, error } = await supabase.from('analytics_events').insert({
         event_type: 'page_view',
         user_id: userId || null,
         session_id: this.sessionId,
@@ -96,9 +96,18 @@ class AnalyticsService {
         browser: getBrowser(),
         os: getOS(),
       });
+      
+      if (error) {
+        console.error('📊 Analytics insert error:', error);
+        if (error.message.includes('relation') || error.message.includes('does not exist')) {
+          console.error('❌ Analytics table does not exist. Run supabase_migration_analytics.sql first!');
+        }
+      } else {
+        console.log('✅ Analytics tracked:', { event: 'page_view', path: window.location.pathname, userId });
+      }
     } catch (error) {
       // Silently fail - don't disrupt user experience
-      console.debug('Analytics tracking failed:', error);
+      console.error('📊 Analytics tracking failed:', error);
     }
   }
 
@@ -107,7 +116,7 @@ class AnalyticsService {
     try {
       const utmParams = getUTMParams();
       
-      await supabase.from('analytics_events').insert({
+      const { data, error: insertError } = await supabase.from('analytics_events').insert({
         event_type: event.event_type,
         user_id: event.user_id || null,
         session_id: this.sessionId,
@@ -120,8 +129,14 @@ class AnalyticsService {
         browser: getBrowser(),
         os: getOS(),
       });
+      
+      if (insertError) {
+        console.error('📊 Analytics event error:', insertError);
+      } else {
+        console.log('✅ Analytics event tracked:', event.event_type);
+      }
     } catch (error) {
-      console.debug('Analytics tracking failed:', error);
+      console.error('📊 Analytics tracking failed:', error);
     }
   }
 
