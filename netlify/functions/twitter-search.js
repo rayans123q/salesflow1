@@ -130,16 +130,17 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('❌ Twitter search error:', error);
+    // Return empty results instead of 500 error to not break the flow
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({ 
-        error: 'Failed to search Twitter',
-        message: error.message,
-        tweets: []
+        tweets: [],
+        warning: 'Twitter search failed',
+        error: error.message
       })
     };
   }
