@@ -59,31 +59,39 @@ exports.handler = async (event, context) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Twitter API error:', response.status, errorText);
+      console.error('❌ Query was:', searchQuery);
+      console.error('❌ URL was:', url);
       
       return {
-        statusCode: response.status,
+        statusCode: 200, // Return 200 to not break the flow
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({ 
-          error: `Twitter API error: ${response.status}`,
-          tweets: []
+          tweets: [],
+          warning: `Twitter API error: ${response.status}`,
+          details: errorText
         })
       };
     }
 
     const data = await response.json();
+    console.log('📊 Twitter API response:', JSON.stringify(data, null, 2));
 
     if (!data.data || data.data.length === 0) {
-      console.log('📭 No tweets found');
+      console.log('📭 No tweets found for query:', searchQuery);
+      console.log('📭 Response meta:', data.meta);
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify({ tweets: [] })
+        body: JSON.stringify({ 
+          tweets: [],
+          info: 'No tweets found - try broader keywords or check if tweets exist for this query on Twitter'
+        })
       };
     }
 
