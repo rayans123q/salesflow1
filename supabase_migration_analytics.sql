@@ -85,7 +85,7 @@ $$;
 -- Function to get device breakdown
 CREATE OR REPLACE FUNCTION get_device_stats(days_back INTEGER DEFAULT 30)
 RETURNS TABLE(
-  device_type VARCHAR(20),
+  device_type TEXT,
   visitor_count BIGINT,
   percentage NUMERIC
 )
@@ -96,17 +96,17 @@ BEGIN
   RETURN QUERY
   WITH device_counts AS (
     SELECT 
-      COALESCE(device_type, 'unknown') as device,
-      COUNT(DISTINCT session_id) as count
-    FROM analytics_events
-    WHERE created_at >= NOW() - (days_back || ' days')::INTERVAL
-    GROUP BY device_type
+      COALESCE(ae.device_type, 'unknown') as device,
+      COUNT(DISTINCT ae.session_id) as count
+    FROM analytics_events ae
+    WHERE ae.created_at >= NOW() - (days_back || ' days')::INTERVAL
+    GROUP BY ae.device_type
   ),
   total_count AS (
     SELECT SUM(count) as total FROM device_counts
   )
   SELECT 
-    dc.device,
+    dc.device::TEXT,
     dc.count,
     ROUND((dc.count::NUMERIC / tc.total::NUMERIC) * 100, 2) as percentage
   FROM device_counts dc, total_count tc
@@ -117,7 +117,7 @@ $$;
 -- Function to get traffic sources
 CREATE OR REPLACE FUNCTION get_traffic_sources(days_back INTEGER DEFAULT 30)
 RETURNS TABLE(
-  source VARCHAR(255),
+  source TEXT,
   visitor_count BIGINT,
   percentage NUMERIC
 )
@@ -129,29 +129,29 @@ BEGIN
   WITH source_counts AS (
     SELECT 
       CASE 
-        WHEN utm_source IS NOT NULL THEN utm_source
-        WHEN referrer IS NOT NULL AND referrer != '' THEN 
+        WHEN ae.utm_source IS NOT NULL THEN ae.utm_source
+        WHEN ae.referrer IS NOT NULL AND ae.referrer != '' THEN 
           CASE
-            WHEN referrer LIKE '%google%' THEN 'Google'
-            WHEN referrer LIKE '%facebook%' THEN 'Facebook'
-            WHEN referrer LIKE '%twitter%' OR referrer LIKE '%x.com%' THEN 'Twitter/X'
-            WHEN referrer LIKE '%linkedin%' THEN 'LinkedIn'
-            WHEN referrer LIKE '%reddit%' THEN 'Reddit'
+            WHEN ae.referrer LIKE '%google%' THEN 'Google'
+            WHEN ae.referrer LIKE '%facebook%' THEN 'Facebook'
+            WHEN ae.referrer LIKE '%twitter%' OR ae.referrer LIKE '%x.com%' THEN 'Twitter/X'
+            WHEN ae.referrer LIKE '%linkedin%' THEN 'LinkedIn'
+            WHEN ae.referrer LIKE '%reddit%' THEN 'Reddit'
             ELSE 'Referral'
           END
         ELSE 'Direct'
       END as source,
-      COUNT(DISTINCT session_id) as count
-    FROM analytics_events
-    WHERE created_at >= NOW() - (days_back || ' days')::INTERVAL
-    AND event_type = 'page_view'
+      COUNT(DISTINCT ae.session_id) as count
+    FROM analytics_events ae
+    WHERE ae.created_at >= NOW() - (days_back || ' days')::INTERVAL
+    AND ae.event_type = 'page_view'
     GROUP BY source
   ),
   total_count AS (
     SELECT SUM(count) as total FROM source_counts
   )
   SELECT 
-    sc.source,
+    sc.source::TEXT,
     sc.count,
     ROUND((sc.count::NUMERIC / tc.total::NUMERIC) * 100, 2) as percentage
   FROM source_counts sc, total_count tc
@@ -166,9 +166,9 @@ RETURNS TABLE(
   first_seen TIMESTAMPTZ,
   last_seen TIMESTAMPTZ,
   page_views BIGINT,
-  device_type VARCHAR(20),
-  browser VARCHAR(50),
-  source VARCHAR(255),
+  device_type TEXT,
+  browser TEXT,
+  source TEXT,
   user_id TEXT
 )
 LANGUAGE plpgsql
@@ -181,8 +181,8 @@ BEGIN
     MIN(ae.created_at) as first_seen,
     MAX(ae.created_at) as last_seen,
     COUNT(*) FILTER (WHERE ae.event_type = 'page_view') as page_views,
-    MAX(ae.device_type) as device_type,
-    MAX(ae.browser) as browser,
+    MAX(ae.device_type)::TEXT as device_type,
+    MAX(ae.browser)::TEXT as browser,
     COALESCE(MAX(ae.utm_source), 
       CASE 
         WHEN MAX(ae.referrer) LIKE '%google%' THEN 'Google'
@@ -190,8 +190,8 @@ BEGIN
         WHEN MAX(ae.referrer) LIKE '%twitter%' THEN 'Twitter/X'
         ELSE 'Direct'
       END
-    ) as source,
-    MAX(ae.user_id) as user_id
+    )::TEXT as source,
+    MAX(ae.user_id)::TEXT as user_id
   FROM analytics_events ae
   GROUP BY ae.session_id
   ORDER BY MAX(ae.created_at) DESC
