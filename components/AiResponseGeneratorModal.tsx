@@ -45,18 +45,29 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     
     // Scroll to top and lock body scroll when modal opens
     React.useEffect(() => {
-        // Lock body scroll
+        // Save current scroll position
+        const scrollY = window.scrollY;
+        
+        // Lock body scroll and prevent background scrolling
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
         document.body.style.width = '100%';
         
-        // Scroll modal container to top
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        // Force scroll to top immediately
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+        }, 0);
         
         return () => {
-            document.body.style.overflow = 'unset';
-            document.body.style.position = 'unset';
-            document.body.style.width = 'unset';
+            // Restore body scroll
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            
+            // Restore scroll position
+            window.scrollTo(0, scrollY);
         };
     }, []);
     
@@ -74,8 +85,8 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center z-40 p-4 overflow-y-auto" onClick={onClose}>
-            <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh] my-4 sm:my-0" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40 p-4 overflow-y-auto" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '2rem' }}>
+            <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
                     <CloseIcon className="w-6 h-6" />
                 </button>
