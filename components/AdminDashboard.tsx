@@ -36,8 +36,10 @@ interface AdminNotification {
   createdAt: string;
 }
 
+import AdminAnalytics from './AdminAnalytics';
+
 const AdminDashboard: React.FC<{ user: User }> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'notifications'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'users' | 'logs' | 'notifications'>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<UserWithDetails[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
@@ -221,7 +223,7 @@ const AdminDashboard: React.FC<{ user: User }> = ({ user }) => {
 
       <div className="bg-gray-800 border-b border-gray-700 px-6">
         <div className="flex space-x-1 overflow-x-auto">
-          {(['overview', 'users', 'logs', 'notifications'] as const).map((tab) => (
+          {(['overview', 'analytics', 'users', 'logs', 'notifications'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -229,7 +231,7 @@ const AdminDashboard: React.FC<{ user: User }> = ({ user }) => {
                 activeTab === tab ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400'
               }`}
             >
-              {tab}
+              {tab === 'analytics' ? '📊 Analytics' : tab}
               {tab === 'notifications' && unreadCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">{unreadCount}</span>
               )}
@@ -260,6 +262,10 @@ const AdminDashboard: React.FC<{ user: User }> = ({ user }) => {
               <p className="text-white text-3xl font-bold mt-1">{stats.totalPosts || 0}</p>
             </div>
           </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <AdminAnalytics />
         )}
 
         {activeTab === 'users' && (
