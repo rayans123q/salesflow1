@@ -27,6 +27,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
         setMessage(null);
         setLoading(true);
 
+        // Safety timeout - reset loading after 10 seconds no matter what
+        const safetyTimeout = setTimeout(() => {
+            console.warn('⚠️ Login timeout - resetting loading state');
+            setLoading(false);
+            setError('Login is taking too long. Please try again.');
+        }, 10000);
+
         try {
             if (isSignUp) {
                 // Sign up
@@ -89,6 +96,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 });
 
                 if (signInError) {
+                    console.error('❌ Sign in error:', signInError);
                     setError(signInError.message);
                     setLoading(false);
                     return;
@@ -100,8 +108,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     // Store flag for race condition handling (existing users shouldn't need this, but just in case)
                     sessionStorage.setItem('just_logged_in', 'true');
                     
-                    // Clear loading state immediately to prevent freezing
-                    setLoading(false);
                     // Auth successful - the onAuthStateChange listener will handle the rest
                     // Just call onLogin to close modal and show success
                     try {
@@ -114,13 +120,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     } catch (loginError) {
                         console.error('❌ onLogin callback error:', loginError);
                         // Don't show error to user, auth was successful
+                    } finally {
+                        // Always clear loading state after a short delay
+                        setTimeout(() => setLoading(false), 500);
                     }
+                } else {
+                    console.error('❌ No user data returned from sign in');
+                    setError('Sign in failed. Please try again.');
+                    setLoading(false);
                 }
             }
         } catch (err) {
+            console.error('❌ Auth error:', err);
             setError('An unexpected error occurred. Please try again.');
             setLoading(false);
-            console.error('Auth error:', err);
+        } finally {
+            // Clear the safety timeout
+            clearTimeout(safetyTimeout);
         }
     };
 
