@@ -143,25 +143,37 @@ class AnalyticsService {
   // Admin functions to retrieve analytics data
   async getDailyStats(daysBack: number = 30) {
     const { data, error } = await supabase.rpc('get_daily_visitor_stats', { days_back: daysBack });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ getDailyStats error:', error);
+      throw error;
+    }
     return data;
   }
 
   async getDeviceStats(daysBack: number = 30) {
     const { data, error } = await supabase.rpc('get_device_stats', { days_back: daysBack });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ getDeviceStats error:', error);
+      throw error;
+    }
     return data;
   }
 
   async getTrafficSources(daysBack: number = 30) {
     const { data, error } = await supabase.rpc('get_traffic_sources', { days_back: daysBack });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ getTrafficSources error:', error);
+      throw error;
+    }
     return data;
   }
 
   async getRecentVisitors(limit: number = 100) {
     const { data, error } = await supabase.rpc('get_recent_visitors', { limit_count: limit });
-    if (error) throw error;
+    if (error) {
+      console.error('❌ getRecentVisitors error:', error);
+      throw error;
+    }
     return data;
   }
 }
