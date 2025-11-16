@@ -18,9 +18,9 @@ import OnboardingTour from './components/OnboardingTour';
 import PaymentGate from './components/PaymentGate';
 import ThankYouPage from './components/ThankYouPage';
 import { databaseService } from './services/databaseService';
+import { analyticsService } from './services/analyticsService';
 import { supabase } from './services/supabaseClient';
 import { whopService } from './services/whopService';
-import { visitorTrackingService } from './services/visitorTrackingService';
 
 // Keep theme in localStorage for immediate access before user loads
 const THEME_STORAGE_KEY = 'salesflow_theme';
@@ -154,6 +154,11 @@ const App: React.FC = () => {
             } finally {
                 setIsInitializing(false);
                 setIsLoading(false);
+                
+                // Initialize analytics tracking (non-blocking)
+                analyticsService.initialize().catch(err => 
+                    console.debug('Analytics initialization failed:', err)
+                );
             }
         };
 
@@ -175,6 +180,12 @@ const App: React.FC = () => {
                 setUser(newUser);
                 setIsInitializing(false); // Make sure we're not in initializing state
                 console.log('✅ User set:', newUser.email);
+                
+                // Track login/signup event
+                analyticsService.trackEvent({
+                    event_type: event === 'SIGNED_IN' ? 'login' : 'signup',
+                    user_id: newUser.id,
+                }).catch(err => console.debug('Analytics tracking failed:', err));
                 
                 // Check subscription status in background (non-blocking)
                 (async () => {
@@ -396,16 +407,13 @@ const App: React.FC = () => {
     }, [hasSubscription, user?.id, showPaymentGate]);
 
     // Track visitor analytics
+    // Track page views when user changes
     useEffect(() => {
-        const trackVisitor = async () => {
-            try {
-                await visitorTrackingService.trackPageVisit(user?.id);
-            } catch (error) {
-                console.error('Failed to track visitor:', error);
-            }
-        };
-
-        trackVisitor();
+        if (user?.id) {
+            analyticsService.trackPageView(user.id).catch(err => 
+                console.debug('Analytics tracking failed:', err)
+            );
+        }
     }, [user?.id]);
 
     // Update usage when campaigns change
@@ -629,6 +637,12 @@ const App: React.FC = () => {
             if (user?.id) {
                 await databaseService.updateUserSettings(user.id, { usage: newUsage });
             }
+            
+            // Track campaign creation event
+            analyticsService.trackEvent({
+                event_type: 'campaign_created',
+                user_id: user.id,
+            }).catch(err => console.debug('Analytics tracking failed:', err));
             
             setPage('CAMPAIGNS');
             

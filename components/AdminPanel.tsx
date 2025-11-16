@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { databaseService } from '../services/databaseService';
+import AdminAnalytics from './AdminAnalytics';
 
 interface UserData {
   id: string;
@@ -17,7 +18,10 @@ interface UserData {
   campaignCount: number;
 }
 
+type AdminTab = 'users' | 'analytics';
+
 const AdminPanel: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
   const [users, setUsers] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,6 +113,30 @@ const AdminPanel: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-[var(--text-primary)]">Admin Panel</h1>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-[var(--border-color)]">
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'analytics'
+              ? 'text-[var(--brand-primary)] border-b-2 border-[var(--brand-primary)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          📊 Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'users'
+              ? 'text-[var(--brand-primary)] border-b-2 border-[var(--brand-primary)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          👥 Users ({users.length})
+        </button>
+      </div>
+
       {error && (
         <div className="mb-4 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-400">
           {error}
@@ -120,6 +148,11 @@ const AdminPanel: React.FC = () => {
           {successMessage}
         </div>
       )}
+
+      {/* Tab Content */}
+      {activeTab === 'analytics' ? (
+        <AdminAnalytics />
+      ) : (
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Users List */}
@@ -279,6 +312,7 @@ const AdminPanel: React.FC = () => {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };
