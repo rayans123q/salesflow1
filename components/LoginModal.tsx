@@ -52,6 +52,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     if (data.user.email_confirmed_at) {
                         // User is immediately confirmed - grant access (no payment required)
                         console.log('✅ Sign up successful, granting access...');
+                        
+                        // Store flag for race condition handling
+                        sessionStorage.setItem('just_logged_in', 'true');
+                        
                         try {
                             onLogin({
                                 id: data.user.id,
@@ -61,6 +65,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                             console.log('✅ onLogin callback completed');
                         } catch (loginError) {
                             console.error('❌ onLogin callback error:', loginError);
+                            // Don't show error - auth was successful
                         } finally {
                             // Always clear loading state
                             setLoading(false);
@@ -91,6 +96,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
 
                 if (data.user) {
                     console.log('✅ Sign in successful, calling onLogin callback');
+                    
+                    // Store flag for race condition handling (existing users shouldn't need this, but just in case)
+                    sessionStorage.setItem('just_logged_in', 'true');
+                    
                     // Clear loading state immediately to prevent freezing
                     setLoading(false);
                     // Auth successful - the onAuthStateChange listener will handle the rest

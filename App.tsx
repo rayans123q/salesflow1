@@ -190,7 +190,7 @@ const App: React.FC = () => {
                 
                 setShowPaymentGate(false);
                 
-                // Ensure user exists in database (BLOCKING - must complete before user can create campaigns)
+                // Ensure user exists in database (CRITICAL - must complete before loading data)
                 (async () => {
                     try {
                         console.log('👤 Ensuring user exists in database:', newUser.email);
@@ -217,21 +217,31 @@ const App: React.FC = () => {
                             
                             if (insertError) {
                                 console.error('❌ Failed to create user:', insertError);
-                                // Retry once if it fails
-                                await new Promise(resolve => setTimeout(resolve, 1000));
-                                const { error: retryError } = await supabase
-                                    .from('users')
-                                    .insert({
-                                        id: newUser.id,
-                                        email: newUser.email,
-                                        name: newUser.name,
-                                        role: 'user',
-                                        created_at: new Date().toISOString(),
-                                    });
-                                if (retryError) {
-                                    console.error('❌ Retry failed:', retryError);
-                                } else {
-                                    console.log('✅ User created successfully on retry');
+                                // Retry up to 3 times with increasing delays
+                                let retryCount = 0;
+                                let success = false;
+                                while (retryCount < 3 && !success) {
+                                    retryCount++;
+                                    const delay = retryCount * 1000; // 1s, 2s, 3s
+                                    console.log(`⏳ Retry ${retryCount}/3 in ${delay}ms...`);
+                                    await new Promise(resolve => setTimeout(resolve, delay));
+                                    
+                                    const { error: retryError } = await supabase
+                                        .from('users')
+                                        .insert({
+                                            id: newUser.id,
+                                            email: newUser.email,
+                                            name: newUser.name,
+                                            role: 'user',
+                                            created_at: new Date().toISOString(),
+                                        });
+                                    
+                                    if (!retryError) {
+                                        console.log(`✅ User created successfully on retry ${retryCount}`);
+                                        success = true;
+                                    } else if (retryCount === 3) {
+                                        console.error('❌ All retries failed:', retryError);
+                                    }
                                 }
                             } else {
                                 console.log('✅ User created successfully in database');
@@ -309,6 +319,15 @@ const App: React.FC = () => {
         const loadUserData = async () => {
             setIsLoading(true);
             try {
+                // Wait a bit for user to be created in database (if just signed up)
+                // This prevents race condition where we try to load data before user exists
+                const justLoggedIn = sessionStorage.getItem('just_logged_in');
+                if (justLoggedIn) {
+                    console.log('⏳ Waiting for user creation to complete...');
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    sessionStorage.removeItem('just_logged_in');
+                }
+                
                 // Load campaigns, posts, settings, and comment history in parallel
                 const [campaignsData, postsData, settingsData, commentHistoryData] = await Promise.all([
                     databaseService.getCampaigns(user.id!),
@@ -327,7 +346,35 @@ const App: React.FC = () => {
                 setCommentHistory(commentHistoryData);
         } catch (error) {
                 console.error('Failed to load user data:', error);
-                showNotification('error', 'Failed to load data from database.');
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                
+                // If it's a "user not found" error, wait and retry once
+                if (errorMessage.includes('user') || errorMessage.includes('foreign key') || errorMessage.includes('violates')) {
+                    console.log('⚠️ User not found, retrying in 2 seconds...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    try {
+                        const [campaignsData, postsData, settingsData, commentHistoryData] = await Promise.all([
+                            databaseService.getCampaigns(user.id!),
+                            databaseService.getPosts(user.id!),
+                            databaseService.getUserSettings(user.id!),
+                            databaseService.getCommentHistory(user.id!),
+                        ]);
+                        setCampaigns(campaignsData);
+                        setPosts(postsData);
+                        setTheme(settingsData.theme);
+                        setSavedAiStyle(settingsData.aiStyle);
+                        setRedditCreds(settingsData.redditCreds);
+                        setSubscription(settingsData.subscription);
+                        setUsage(settingsData.usage);
+                        setCommentHistory(commentHistoryData);
+                        console.log('✅ Retry successful');
+                    } catch (retryError) {
+                        console.error('❌ Retry failed:', retryError);
+                        showNotification('error', 'Please refresh the page to continue.');
+                    }
+                } else {
+                    showNotification('error', 'Failed to load data. Please refresh the page.');
+                }
             } finally {
                 setIsLoading(false);
             }
