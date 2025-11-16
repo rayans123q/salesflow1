@@ -29,6 +29,10 @@ CREATE INDEX IF NOT EXISTS idx_analytics_utm_source ON analytics_events(utm_sour
 -- Enable Row Level Security
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can insert analytics events" ON analytics_events;
+DROP POLICY IF EXISTS "Only admins can read analytics" ON analytics_events;
+
 -- Policy: Anyone can insert analytics events (for tracking)
 CREATE POLICY "Anyone can insert analytics events"
   ON analytics_events
@@ -46,6 +50,12 @@ CREATE POLICY "Only admins can read analytics"
       AND users.role = 'admin'
     )
   );
+
+-- Drop existing functions if they exist
+DROP FUNCTION IF EXISTS get_daily_visitor_stats(INTEGER);
+DROP FUNCTION IF EXISTS get_device_stats(INTEGER);
+DROP FUNCTION IF EXISTS get_traffic_sources(INTEGER);
+DROP FUNCTION IF EXISTS get_recent_visitors(INTEGER);
 
 -- Function to get daily visitor stats
 CREATE OR REPLACE FUNCTION get_daily_visitor_stats(days_back INTEGER DEFAULT 30)
