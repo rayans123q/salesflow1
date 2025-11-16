@@ -4,6 +4,7 @@ import { AIStyleSettings, Campaign, Post, RedditCredentials, LeadSource } from '
 import apiKeyManager from './apiKeyManager';
 import { redditOAuthService } from './redditOAuthService';
 import { twitterService } from './twitterService';
+import { deepseekService } from './deepseekService';
 
 // Initialize Gemini AI client with first available API key
 let currentApiKey = apiKeyManager.getNextApiKey();
@@ -783,19 +784,47 @@ const findRedditPostsInternal = async (
               If no posts are relevant, return an empty array: \`[]\`.`;
 
             let geminiResponse;
+            let responseText: string;
+            
             try {
                 geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
-            } catch (aiError) {
-                // If API key failed, try with next key
-                if (handleApiError(aiError)) {
-                    console.log('🔄 Retrying Reddit analysis with new API key...');
-                    geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                responseText = geminiResponse.text;
+            } catch (aiError: any) {
+                // Check if Gemini is overloaded (503)
+                const isOverloaded = aiError?.message?.includes('503') || 
+                                   aiError?.message?.includes('overloaded') || 
+                                   aiError?.message?.includes('UNAVAILABLE');
+                
+                if (isOverloaded && deepseekService.isConfigured()) {
+                    console.warn('⚠️ Gemini overloaded, falling back to DeepSeek...');
+                    try {
+                        responseText = await deepseekService.generateContent(prompt);
+                    } catch (deepseekError) {
+                        console.error('❌ DeepSeek fallback also failed:', deepseekError);
+                        throw new Error('Both Gemini and DeepSeek failed. Please try again later.');
+                    }
+                } else if (handleApiError(aiError)) {
+                    // If API key failed, try with next Gemini key
+                    console.log('🔄 Retrying Reddit analysis with new Gemini API key...');
+                    try {
+                        geminiResponse = await ai.models.generateContent({ model: "gemini-2.5-pro", contents: prompt });
+                        responseText = geminiResponse.text;
+                    } catch (retryError: any) {
+                        // If retry also fails with overload, try DeepSeek
+                        if ((retryError?.message?.includes('503') || retryError?.message?.includes('overloaded')) && 
+                            deepseekService.isConfigured()) {
+                            console.warn('⚠️ Gemini still overloaded, using DeepSeek...');
+                            responseText = await deepseekService.generateContent(prompt);
+                        } else {
+                            throw retryError;
+                        }
+                    }
                 } else {
                     throw aiError;
                 }
             }
             
-            const scoredPosts = parseGeminiResponse(geminiResponse.text);
+            const scoredPosts = parseGeminiResponse(responseText);
             
             const filteredPosts = scoredPosts.map((scoredPost: { postUrl: string; relevance: number }) => {
                 if (!scoredPost?.postUrl) return null;
