@@ -30,8 +30,8 @@ const PostCard: React.FC<{
     hasSubscription: boolean;
 }> = ({ post, onComment, onViewPost, websiteUrl, hasSubscription }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const buttonLabel = post.status === 'contacted' ? 'Engaged' : 'Generate AI Comment';
-    const buttonDisabled = post.status === 'contacted';
+    const buttonLabel = post.status === 'contacted' ? 'Generate New Comment' : 'Generate AI Comment';
+    const buttonDisabled = false; // Always allow generating comments
     
     const relevanceColor = post.relevance > 90 ? 'bg-green-500/20 text-green-300' : post.relevance > 80 ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300';
 
@@ -81,13 +81,15 @@ const PostCard: React.FC<{
                     onClick={() => onComment(post)}
                     className={`flex items-center gap-2 font-semibold px-5 py-2 rounded-lg text-sm shadow-md transition-opacity ${
                         hasSubscription
-                            ? 'bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white hover:opacity-90 disabled:opacity-50 disabled:from-gray-600 disabled:to-gray-500 disabled:cursor-not-allowed'
+                            ? post.status === 'contacted'
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:opacity-90'
+                                : 'bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-secondary)] text-white hover:opacity-90'
                             : 'bg-gray-600/50 text-gray-400 hover:bg-gray-600/70 cursor-pointer'
                     }`}
-                    disabled={buttonDisabled && hasSubscription}
-                    title={!hasSubscription ? 'Click to subscribe and unlock' : ''}
+                    title={!hasSubscription ? 'Click to subscribe and unlock' : post.status === 'contacted' ? 'Generate another comment for this post' : 'Generate AI comment'}
                 >
                     {!hasSubscription && <LockIcon className="w-4 h-4" />}
+                    {post.status === 'contacted' && hasSubscription && '✓ '}
                     {buttonLabel}
                 </button>
             </div>
