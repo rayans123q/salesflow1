@@ -21,19 +21,20 @@ exports.handler = async (event, context) => {
     }
 
     // Get Twitter bearer token from environment
-    const bearerToken = process.env.VITE_TWITTER_BEARER_TOKEN;
+    const bearerToken = process.env.VITE_TWITTER_BEARER_TOKEN || process.env.TWITTER_BEARER_TOKEN;
     
     if (!bearerToken) {
       console.warn('⚠️ Twitter bearer token not configured');
+      // Return empty results instead of error to not break the flow
       return {
-        statusCode: 503,
+        statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({ 
-          error: 'Twitter API not configured',
-          tweets: []
+          tweets: [],
+          warning: 'Twitter API not configured'
         })
       };
     }

@@ -726,7 +726,7 @@ const processResults = (posts: any[], source: LeadSource): Omit<Post, 'id' | 'ca
         })
         .filter((p): p is Omit<Post, 'id' | 'campaignId' | 'status'> => 
             !!p && 
-            typeof p.relevance === 'number' && p.relevance >= 70 &&
+            typeof p.relevance === 'number' && p.relevance >= 60 &&
             p.url && p.sourceName && p.title && p.content
         );
 };
@@ -775,8 +775,9 @@ const findRedditPostsInternal = async (
               2.  **Score Relevance (0-100):** 
                   *   90-100: User is EXPLICITLY asking for a tool/service that matches the product.
                   *   70-89: User is describing a problem the product solves, but not asking for a solution.
-                  *   <70: General discussion. DO NOT INCLUDE these.
-              3.  **Output:** Return a JSON array for posts with a score >= 70. Each object must contain ONLY the original \`postUrl\` and your calculated \`relevance\` score.
+                  *   60-69: User is discussing related topics or showing interest in the problem space.
+                  *   <60: General discussion. DO NOT INCLUDE these.
+              3.  **Output:** Return a JSON array for posts with a score >= 60. Each object must contain ONLY the original \`postUrl\` and your calculated \`relevance\` score.
               **POSTS TO ANALYZE:**
               ${JSON.stringify(postsForAnalysis)}
               If no posts are relevant, return an empty array: \`[]\`.`;
@@ -933,10 +934,10 @@ const findTwitterPostsInternal = async (
                 }));
                 
                 // Use AI to score relevance
-                const prompt = `Analyze these tweets and score their relevance (70-100) to: ${campaign.description}
+                const prompt = `Analyze these tweets and score their relevance (60-100) to: ${campaign.description}
                 Keywords: ${campaign.keywords.join(', ')}
                 Tweets: ${JSON.stringify(tweetsForAnalysis)}
-                Return JSON array with postUrl and relevance score for tweets scoring >= 70.`;
+                Return JSON array with postUrl and relevance score for tweets scoring >= 60.`;
                 
                 let geminiResponse;
                 try {
