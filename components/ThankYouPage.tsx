@@ -7,6 +7,64 @@ const ThankYouPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [verifying, setVerifying] = useState(true);
+    const [hasValidToken, setHasValidToken] = useState(false);
+
+    // Check for verification token on mount
+    React.useEffect(() => {
+        const checkToken = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const membershipId = urlParams.get('membership_id');
+
+            // If no token, this is an unauthorized access attempt
+            if (!token && !membershipId) {
+                console.warn('⚠️ No verification token - unauthorized access attempt');
+                setError('Invalid access. Please complete payment through the checkout page.');
+                setVerifying(false);
+                setHasValidToken(false);
+                
+                // Redirect to home after 3 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+                return;
+            }
+
+            // If we have a membership ID from Whop redirect, verify it
+            if (membershipId) {
+                try {
+                    // Call backend to verify the membership
+                    const response = await fetch('/.netlify/functions/verify-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ membershipId })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.verified) {
+                        setHasValidToken(true);
+                        setEmail(data.email || '');
+                    } else {
+                        setError('Payment verification failed. Please contact support.');
+                        setHasValidToken(false);
+                    }
+                } catch (err) {
+                    console.error('Verification error:', err);
+                    setError('Failed to verify payment. Please contact support.');
+                    setHasValidToken(false);
+                }
+            } else {
+                // Legacy token-based verification
+                setHasValidToken(true);
+            }
+            
+            setVerifying(false);
+        };
+
+        checkToken();
+    }, []);
 
     const handleActivateSubscription = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -14,30 +72,28 @@ const ThankYouPage: React.FC = () => {
         setLoading(true);
 
         try {
-            // Add email to subscribed_users table
-            const { error: insertError } = await supabase
-                .from('subscribed_users')
-                .insert({
-                    email: email.toLowerCase().trim(),
-                    subscribed_at: new Date().toISOString(),
-                    status: 'active'
-                });
+            // Verify payment before activating
+            const urlParams = new URLSearchParams(window.location.search);
+            const membershipId = urlParams.get('membership_id');
 
-            if (insertError) {
-                // If already exists, update it
-                if (insertError.code === '23505') {
-                    const { error: updateError } = await supabase
-                        .from('subscribed_users')
-                        .update({ 
-                            status: 'active',
-                            subscribed_at: new Date().toISOString()
-                        })
-                        .eq('email', email.toLowerCase().trim());
-                    
-                    if (updateError) throw updateError;
-                } else {
-                    throw insertError;
-                }
+            if (!membershipId) {
+                throw new Error('No membership ID found');
+            }
+
+            // Call backend to activate subscription
+            const response = await fetch('/.netlify/functions/activate-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: email.toLowerCase().trim(),
+                    membershipId 
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to activate subscription');
             }
 
             setSuccess(true);
@@ -49,10 +105,51 @@ const ThankYouPage: React.FC = () => {
 
         } catch (err) {
             console.error('Error activating subscription:', err);
-            setError('Failed to activate subscription. Please try again or contact support.');
+            setError(err instanceof Error ? err.message : 'Failed to activate subscription. Please contact support.');
             setLoading(false);
         }
     };
+
+    // Show loading while verifying token
+    if (verifying) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 max-w-md w-full text-center border border-white/20 shadow-2xl">
+                    <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                    <h1 className="text-2xl font-bold text-white mb-2">
+                        Verifying Payment...
+                    </h1>
+                    <p className="text-gray-200">
+                        Please wait while we confirm your subscription
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error if no valid token
+    if (!hasValidToken) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 max-w-md w-full text-center border border-white/20 shadow-2xl">
+                    <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <h1 className="text-3xl font-bold text-white mb-4">
+                        Access Denied
+                    </h1>
+                    <p className="text-gray-200 mb-6">
+                        {error || 'This page can only be accessed after completing payment.'}
+                    </p>
+                    <p className="text-sm text-gray-300">
+                        Redirecting to home page...
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (success) {
         return (

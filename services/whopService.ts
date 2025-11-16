@@ -181,6 +181,7 @@ class WhopService {
 
     // Get current app URL for redirect after payment
     const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    // Whop will append membership_id to the redirect URL automatically
     const redirectUrl = `${appUrl}/thank-you`;
 
     // Construct Whop checkout URL with redirect parameter and email

@@ -1,56 +1,8 @@
-// Netlify Function to handle Whop webhooks
-// This updates subscription status when users subscribe/cancel
+// Whop Webhook Handler
+// Handles subscription lifecycle events: created, renewed, cancelled, expired
+// This ensures automatic subscription management without manual intervention
 
-const { createClient } = require('@supabase/supabase-js');
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY
-);
-
-// Update user subscription in database
-async function updateSubscription(userId, status, membershipData) {
-  try {
-    const updateData = {
-      subscription_status: status,
-      reddit_api_subscribed: status === 'active' || status === 'trialing',
-      subscription_started_at: membershipData.created_at ? new Date(membershipData.created_at * 1000).toISOString() : null,
-      subscription_expires_at: membershipData.expires_at ? new Date(membershipData.expires_at * 1000).toISOString() : null,
-      whop_membership_id: membershipData.id,
-      whop_plan_id: membershipData.plan_id,
-    };
-
-    // Check if user_settings exists
-    const { data: existing } = await supabase
-      .from('user_settings')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (existing) {
-      // Update existing
-      const { error } = await supabase
-        .from('user_settings')
-        .update(updateData)
-        .eq('user_id', userId);
-      
-      if (error) throw error;
-      console.log(`✅ Updated subscription for user ${userId}`);
-    } else {
-      // Create new
-      const { error } = await supabase
-        .from('user_settings')
-        .insert([{ user_id: userId, ...updateData }]);
-      
-      if (error) throw error;
-      console.log(`✅ Created subscription for user ${userId}`);
-    }
-  } catch (error) {
-    console.error(`❌ Failed to update subscription for user ${userId}:`, error);
-    throw error;
-  }
-}
+const crypto = require('crypto');
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -64,81 +16,152 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, headers, body: '' };
   }
 
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
   try {
-    console.log('📥 Whop webhook received');
-    
-    const payload = JSON.parse(event.body || '{}');
-    const { type, data } = payload;
+    // Verify webhook signature for security
+    const signature = event.headers['x-whop-signature'];
+    const webhookSecret = process.env.WHOP_WEBHOOK_SECRET;
 
-    console.log('Webhook type:', type);
-    console.log('Webhook data:', JSON.stringify(data, null, 2));
+    if (webhookSecret && signature) {
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(event.body)
+        .digest('hex');
 
-    // Extract user ID from membership data
-    const userId = data.user_id || data.user?.id;
+      if (signature !== expectedSignature) {
+        console.error('❌ Invalid webhook signature');
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: 'Invalid signature' })
+        };
+      }
+    }
+
+    const payload = JSON.parse(event.body);
+    console.log('📥 Whop webhook received:', payload.action);
+
+    const { action, data } = payload;
+    const membership = data;
+
+    // Get user email from membership
+    const userEmail = membership.email || membership.user?.email;
     
-    if (!userId) {
-      console.warn('⚠️ No user ID found in webhook data');
+    if (!userEmail) {
+      console.error('❌ No email found in webhook payload');
       return {
-        statusCode: 200,
+        statusCode: 400,
         headers,
-        body: JSON.stringify({ received: true, warning: 'No user ID' })
+        body: JSON.stringify({ error: 'No email in payload' })
       };
     }
 
-    // Handle different webhook events
-    switch (type) {
-      case 'membership.created':
-        console.log('✅ New subscription created:', data.id);
-        await updateSubscription(userId, data.status || 'active', data);
-        break;
+    // Initialize Supabase
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY
+    );
 
-      case 'membership.updated':
-        console.log('🔄 Subscription updated:', data.id);
-        await updateSubscription(userId, data.status || 'active', data);
+    // Handle different webhook events
+    switch (action) {
+      case 'membership.created':
+      case 'membership.went_valid':
+      case 'payment.succeeded':
+        // Activate subscription
+        console.log('✅ Activating subscription for:', userEmail);
+        
+        const { error: upsertError } = await supabase
+          .from('subscribed_users')
+          .upsert({
+            email: userEmail.toLowerCase(),
+            status: 'active',
+            subscribed_at: new Date().toISOString(),
+            whop_membership_id: membership.id,
+            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null
+          }, {
+            onConflict: 'email'
+          });
+
+        if (upsertError) {
+          console.error('❌ Failed to activate subscription:', upsertError);
+          throw upsertError;
+        }
+
+        console.log('✅ Subscription activated successfully');
         break;
 
       case 'membership.cancelled':
-        console.log('❌ Subscription cancelled:', data.id);
-        await updateSubscription(userId, 'cancelled', data);
-        break;
-
+      case 'membership.went_invalid':
       case 'membership.expired':
-        console.log('⏰ Subscription expired:', data.id);
-        await updateSubscription(userId, 'expired', data);
-        break;
+        // Deactivate subscription
+        console.log('❌ Deactivating subscription for:', userEmail);
+        
+        const { error: updateError } = await supabase
+          .from('subscribed_users')
+          .update({
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString()
+          })
+          .eq('email', userEmail.toLowerCase());
 
-      case 'payment.succeeded':
-        console.log('💰 Payment succeeded:', data.id);
-        // Payment succeeded, membership should be active
-        if (data.membership_id) {
-          await updateSubscription(userId, 'active', data);
+        if (updateError) {
+          console.error('❌ Failed to deactivate subscription:', updateError);
+          throw updateError;
         }
+
+        console.log('✅ Subscription deactivated successfully');
         break;
 
-      case 'payment.failed':
-        console.log('⚠️ Payment failed:', data.id);
-        // Don't change status on failed payment, just log it
-        console.log(`Payment failed for user ${userId}`);
+      case 'membership.renewed':
+        // Renew subscription
+        console.log('🔄 Renewing subscription for:', userEmail);
+        
+        const { error: renewError } = await supabase
+          .from('subscribed_users')
+          .update({
+            status: 'active',
+            subscribed_at: new Date().toISOString(),
+            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null
+          })
+          .eq('email', userEmail.toLowerCase());
+
+        if (renewError) {
+          console.error('❌ Failed to renew subscription:', renewError);
+          throw renewError;
+        }
+
+        console.log('✅ Subscription renewed successfully');
         break;
 
       default:
-        console.log('ℹ️ Unhandled webhook type:', type);
+        console.log('ℹ️ Unhandled webhook action:', action);
     }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ received: true })
+      body: JSON.stringify({ 
+        success: true,
+        message: 'Webhook processed successfully'
+      })
     };
 
   } catch (error) {
-    console.error('❌ Webhook error:', error);
+    console.error('❌ Webhook processing error:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: 'Webhook processing failed',
-        message: error.message 
+        error: 'Internal server error',
+        details: error.message
       })
     };
   }
