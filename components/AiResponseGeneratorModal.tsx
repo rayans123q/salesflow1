@@ -45,10 +45,18 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     
     // Scroll to top and lock body scroll when modal opens
     React.useEffect(() => {
+        // Lock body scroll
         document.body.style.overflow = 'hidden';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        
+        // Scroll modal container to top
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        
         return () => {
             document.body.style.overflow = 'unset';
+            document.body.style.position = 'unset';
+            document.body.style.width = 'unset';
         };
     }, []);
     
@@ -66,8 +74,8 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40 p-4 overflow-y-auto" onClick={onClose}>
-            <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center z-40 p-4 overflow-y-auto" onClick={onClose}>
+            <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh] my-4 sm:my-0" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
                     <CloseIcon className="w-6 h-6" />
                 </button>
