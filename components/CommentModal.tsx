@@ -61,8 +61,9 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-30 p-4 overflow-y-auto" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '2rem' }}>
-            <div className="bg-[var(--bg-secondary)] w-full max-w-2xl rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 z-30 overflow-y-auto" onClick={onClose}>
+            <div className="min-h-screen flex items-start justify-center p-4 py-8">
+                <div className="bg-[var(--bg-secondary)] w-full max-w-2xl rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative my-auto" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                     <CloseIcon className="w-6 h-6" />
                 </button>
@@ -143,6 +144,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
                         </button>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

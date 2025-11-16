@@ -85,8 +85,9 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40 p-4 overflow-y-auto" onClick={onClose} style={{ alignItems: 'flex-start', paddingTop: '2rem' }}>
-            <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 z-40 overflow-y-auto" onClick={onClose}>
+            <div className="min-h-screen flex items-start justify-center p-4 py-8">
+                <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-2xl p-6 sm:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[85vh] my-auto" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
                     <CloseIcon className="w-6 h-6" />
                 </button>
@@ -207,6 +208,7 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
                         </button>
                     )}
                 </div>
+            </div>
             </div>
         </div>
     );
