@@ -47,3 +47,12 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Scheduled Functions (Polling Alternative to Webhooks)
+# Syncs subscription status with Whop every hour
+[[plugins]]
+  package = "@netlify/plugin-functions-schedule"
+  
+  [[plugins.inputs.functions]]
+    name = "sync-subscriptions"
+    schedule = "0 * * * *"  # Every hour at minute 0
