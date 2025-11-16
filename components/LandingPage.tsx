@@ -396,7 +396,7 @@ const HowItWorksSection: React.FC = () => (
 
             <div className="max-w-6xl mx-auto space-y-20">
                 <VideoStep
-                    videoSrc="/wwe/scene-1 (3).webm"
+                    videoSrc="/wwe/scene-1.webm"
                     stepNumber={1}
                     title="Create Your Campaign"
                     description="Set up targeted campaigns with your keywords, negative filters, and target communities. Our AI will scan Reddit and Twitter to find the most relevant conversations where your potential customers are actively discussing their problems."
@@ -404,7 +404,7 @@ const HowItWorksSection: React.FC = () => (
                 />
 
                 <VideoStep
-                    videoSrc="/wwe/scene-3 (1).webm"
+                    videoSrc="/wwe/scene-3.webm"
                     stepNumber={2}
                     title="Review AI-Filtered Leads"
                     description="Sales Flow automatically scores and ranks each post based on relevance. Browse through high-quality leads that match your criteria, with engagement metrics and context to help you prioritize the best opportunities."
@@ -412,7 +412,7 @@ const HowItWorksSection: React.FC = () => (
                 />
 
                 <VideoStep
-                    videoSrc="/wwe/scene-5 (3).webm"
+                    videoSrc="/wwe/scene-5.webm"
                     stepNumber={3}
                     title="Engage with AI-Powered Comments"
                     description="Generate natural, context-aware comments with our AI assistant. Choose your tone, customize your message, and engage authentically. Track your outreach and manage all your conversations in one place."
