@@ -48,6 +48,15 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
         onClose();
     };
 
+    const handleOpenAi = () => {
+        // Scroll to top before opening AI modal
+        if (overlayRef.current) {
+            overlayRef.current.scrollTop = 0;
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        onOpenAi();
+    };
+
     return (
         <div ref={overlayRef} className="fixed inset-0 bg-black/70 z-30 overflow-y-auto" onClick={onClose}>
             <div className="min-h-screen flex items-center justify-center p-4 py-8">
@@ -105,7 +114,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
                 
                 <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 mt-6 border-t border-[var(--border-color)] pt-6">
                      <button 
-                        onClick={onOpenAi}
+                        onClick={handleOpenAi}
                         className="bg-black/20 dark:bg-white/10 text-[var(--text-secondary)] font-semibold px-6 py-3 rounded-lg hover:bg-black/30 dark:hover:bg-white/20 transition-colors w-full sm:w-auto"
                     >
                         Write with AI
