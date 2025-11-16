@@ -17,12 +17,17 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
     const [isHistoryVisible, setIsHistoryVisible] = useState(false);
     const overlayRef = React.useRef<HTMLDivElement>(null);
 
-    // Lock body scroll when modal opens
+    // Lock body scroll when modal opens, but allow modal to scroll
     React.useEffect(() => {
+        const originalStyle = window.getComputedStyle(document.body).overflow;
         document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
         
         return () => {
-            document.body.style.overflow = '';
+            document.body.style.overflow = originalStyle;
+            document.body.style.position = '';
+            document.body.style.width = '';
         };
     }, []);
 
@@ -45,7 +50,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
 
 
     return (
-        <div ref={overlayRef} className="fixed inset-0 bg-black/70 z-30 overflow-y-auto" onClick={onClose}>
+        <div ref={overlayRef} className="fixed inset-0 bg-black/70 z-30 overflow-y-auto overscroll-contain" onClick={onClose} style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4 py-4 sm:py-8">
                 <div className="bg-[var(--bg-secondary)] w-full max-w-2xl rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-[var(--border-color)] shadow-2xl relative my-auto max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-3 right-3 sm:top-4 sm:right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
@@ -53,7 +58,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ post, onClose, onOpenAi, co
                 </button>
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-[var(--text-primary)] pr-8">Engage with Post</h2>
 
-                <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 pr-1 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <div className="bg-[var(--bg-tertiary)] p-3 sm:p-4 rounded-lg max-h-28 sm:max-h-32 md:max-h-48 overflow-y-auto">
                         <p className="text-xs sm:text-sm text-violet-400 font-semibold">{post.sourceName}</p>
                         <h3 className="font-bold text-base sm:text-lg text-[var(--text-primary)] mb-1 sm:mb-2">{post.title}</h3>

@@ -44,10 +44,12 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     const [saveStyle, setSaveStyle] = useState(false);
     const overlayRef = React.useRef<HTMLDivElement>(null);
     
-    // Lock body scroll and scroll modal to top when it opens
+    // Lock body scroll when modal opens, but allow modal to scroll
     React.useEffect(() => {
-        // Prevent body scroll
+        const originalStyle = window.getComputedStyle(document.body).overflow;
         document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
         
         // Scroll modal overlay to top
         if (overlayRef.current) {
@@ -55,7 +57,9 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
         }
         
         return () => {
-            document.body.style.overflow = '';
+            document.body.style.overflow = originalStyle;
+            document.body.style.position = '';
+            document.body.style.width = '';
         };
     }, []);
     
@@ -73,7 +77,7 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     };
 
     return (
-        <div ref={overlayRef} className="fixed inset-0 bg-black/80 z-40 overflow-y-auto" onClick={onClose}>
+        <div ref={overlayRef} className="fixed inset-0 bg-black/80 z-40 overflow-y-auto overscroll-contain" onClick={onClose} style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4 py-4 sm:py-8">
                 <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[95vh] my-auto" onClick={(e) => e.stopPropagation()}>
                 <button onClick={onClose} className="absolute top-3 right-3 sm:top-4 sm:right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
@@ -81,7 +85,7 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
                 </button>
                 <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-center">🤖 AI Response Generator</h2>
                 
-                <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 -mr-1 sm:-mr-2 space-y-4 sm:space-y-6">
+                <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 -mr-1 sm:-mr-2 space-y-4 sm:space-y-6 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {/* Tone */}
                     <div>
                         <label className="block text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-2">Response Style (Tone)</label>
