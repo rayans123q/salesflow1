@@ -35,7 +35,7 @@ END;
 $$;
 
 -- Create a function to check and reset usage for a specific user
-CREATE OR REPLACE FUNCTION check_and_reset_user_usage(p_user_id TEXT)
+CREATE OR REPLACE FUNCTION check_and_reset_user_usage(p_user_id UUID)
 RETURNS TABLE(
   campaigns INTEGER,
   refreshes INTEGER,
@@ -101,8 +101,8 @@ $$;
 
 -- For manual testing, you can run:
 -- SELECT reset_monthly_usage();
--- Or for a specific user:
--- SELECT * FROM check_and_reset_user_usage('user-email@example.com');
+-- Or for a specific user (replace with actual UUID):
+-- SELECT * FROM check_and_reset_user_usage('00000000-0000-0000-0000-000000000000'::UUID);
 
 -- OPTIONAL: Reset all users to 0 (run this if you want to give everyone a fresh start)
 -- UPDATE user_settings SET usage_campaigns = 0, usage_refreshes = 0, usage_ai_responses = 0, usage_reset_date = NOW();
