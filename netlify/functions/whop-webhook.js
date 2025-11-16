@@ -25,7 +25,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Verify webhook signature for security
+    // Verify webhook signature for security (if secret is configured)
     const signature = event.headers['x-whop-signature'];
     const webhookSecret = process.env.WHOP_WEBHOOK_SECRET;
 
@@ -46,10 +46,11 @@ exports.handler = async (event, context) => {
     }
 
     const payload = JSON.parse(event.body);
-    console.log('📥 Whop webhook received:', payload.action);
+    console.log('📥 Whop webhook received:', payload.action || payload.type);
 
-    const { action, data } = payload;
-    const membership = data;
+    // Whop sends different payload structures, handle both
+    const action = payload.action || payload.type;
+    const membership = payload.data || payload;
 
     // Get user email from membership
     const userEmail = membership.email || membership.user?.email;
@@ -70,6 +71,13 @@ exports.handler = async (event, context) => {
       process.env.VITE_SUPABASE_ANON_KEY
     );
 
+    // Log webhook event
+    await supabase.from('webhook_logs').insert({
+      event_type: action,
+      payload: payload,
+      success: true
+    }).catch(err => console.error('Failed to log webhook:', err));
+
     // Handle different webhook events
     switch (action) {
       case 'membership.created':
@@ -85,7 +93,8 @@ exports.handler = async (event, context) => {
             status: 'active',
             subscribed_at: new Date().toISOString(),
             whop_membership_id: membership.id,
-            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null
+            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null,
+            payment_verified: true
           }, {
             onConflict: 'email'
           });
@@ -129,7 +138,8 @@ exports.handler = async (event, context) => {
           .update({
             status: 'active',
             subscribed_at: new Date().toISOString(),
-            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null
+            expires_at: membership.expires_at ? new Date(membership.expires_at * 1000).toISOString() : null,
+            payment_verified: true
           })
           .eq('email', userEmail.toLowerCase());
 
@@ -156,6 +166,25 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('❌ Webhook processing error:', error);
+    
+    // Log error to database
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL,
+        process.env.VITE_SUPABASE_ANON_KEY
+      );
+      
+      await supabase.from('webhook_logs').insert({
+        event_type: 'error',
+        payload: JSON.parse(event.body || '{}'),
+        success: false,
+        error_message: error.message
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     return {
       statusCode: 500,
       headers,
