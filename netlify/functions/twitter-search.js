@@ -1,5 +1,5 @@
 // Netlify Function to search Twitter API (bypasses CORS)
-const fetch = require('node-fetch');
+// Using native fetch (available in Node.js 18+)
 
 exports.handler = async (event, context) => {
   // Only allow POST requests
@@ -20,8 +20,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Get Twitter bearer token from environment
-    const bearerToken = process.env.VITE_TWITTER_BEARER_TOKEN || process.env.TWITTER_BEARER_TOKEN;
+    // Get Twitter bearer token from environment and decode if needed
+    let bearerToken = process.env.VITE_TWITTER_BEARER_TOKEN || process.env.TWITTER_BEARER_TOKEN;
     
     if (!bearerToken) {
       console.warn('⚠️ Twitter bearer token not configured');
@@ -38,15 +38,22 @@ exports.handler = async (event, context) => {
         })
       };
     }
+    
+    // Decode URL-encoded bearer token if needed
+    if (bearerToken.includes('%')) {
+      bearerToken = decodeURIComponent(bearerToken);
+      console.log('🔓 Decoded URL-encoded bearer token');
+    }
 
     console.log('🐦 Searching Twitter for:', keywords);
 
-    // Build search query
-    const searchQuery = keywords.join(' OR ');
+    // Build search query - add filters to find people asking questions or expressing needs
+    // This makes the search more relevant for lead generation
+    const searchQuery = keywords.map(kw => `(${kw})`).join(' OR ') + ' (? OR how OR need OR looking OR help OR recommend OR suggestion)';
     const encodedQuery = encodeURIComponent(searchQuery);
     
-    // Twitter API v2 endpoint
-    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodedQuery}&max_results=${maxResults}&tweet.fields=created_at,public_metrics,author_id&expansions=author_id&user.fields=name,username,profile_image_url`;
+    // Twitter API v2 endpoint - exclude retweets to get original content
+    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodedQuery} -is:retweet&max_results=${maxResults}&tweet.fields=created_at,public_metrics,author_id&expansions=author_id&user.fields=name,username,profile_image_url`;
 
     const response = await fetch(url, {
       method: 'GET',
