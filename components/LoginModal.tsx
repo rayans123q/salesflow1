@@ -90,13 +90,40 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 }
             } else {
                 // Sign in
-                const { data, error: signInError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
+                console.log('🔐 Attempting sign in with email:', email);
+                
+                let data, signInError;
+                try {
+                    // Race the auth call with a 8-second timeout
+                    const authPromise = supabase.auth.signInWithPassword({
+                        email,
+                        password,
+                    });
+                    
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Auth request timeout')), 8000)
+                    );
+                    
+                    const result = await Promise.race([authPromise, timeoutPromise]) as any;
+                    data = result.data;
+                    signInError = result.error;
+                    console.log('📥 Sign in response received:', { hasUser: !!data?.user, hasError: !!signInError });
+                } catch (authError: any) {
+                    console.error('❌ Auth call failed:', authError);
+                    clearTimeout(safetyTimeout);
+                    
+                    if (authError.message === 'Auth request timeout') {
+                        setError('Connection timeout. Please check your internet and try again.');
+                    } else {
+                        setError('Network error. Please check your connection and try again.');
+                    }
+                    setLoading(false);
+                    return;
+                }
 
                 if (signInError) {
                     console.error('❌ Sign in error:', signInError);
+                    clearTimeout(safetyTimeout);
                     setError(signInError.message);
                     setLoading(false);
                     return;
@@ -104,6 +131,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
 
                 if (data.user) {
                     console.log('✅ Sign in successful, calling onLogin callback');
+                    
+                    // Clear the safety timeout since login succeeded
+                    clearTimeout(safetyTimeout);
                     
                     // Store flag for race condition handling (existing users shouldn't need this, but just in case)
                     sessionStorage.setItem('just_logged_in', 'true');
@@ -126,6 +156,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     }
                 } else {
                     console.error('❌ No user data returned from sign in');
+                    clearTimeout(safetyTimeout);
                     setError('Sign in failed. Please try again.');
                     setLoading(false);
                 }
