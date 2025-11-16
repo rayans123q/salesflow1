@@ -325,6 +325,104 @@ const PricingSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }>
 };
 
 
+// Video Step Component with Intersection Observer for autoplay
+const VideoStep: React.FC<{ 
+    videoSrc: string; 
+    title: string; 
+    description: string; 
+    stepNumber: number;
+    reverse?: boolean;
+}> = ({ videoSrc, title, description, stepNumber, reverse = false }) => {
+    const videoRef = React.useRef<HTMLVideoElement>(null);
+    const [ref, isVisible] = useIntersectionObserver({ threshold: 0.3 });
+
+    React.useEffect(() => {
+        if (videoRef.current) {
+            if (isVisible) {
+                videoRef.current.play().catch(err => console.log('Video autoplay failed:', err));
+            } else {
+                videoRef.current.pause();
+            }
+        }
+    }, [isVisible]);
+
+    return (
+        <div 
+            ref={ref}
+            className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-8 lg:gap-12 scroll-target ${isVisible ? 'is-visible' : ''}`}
+        >
+            {/* Video */}
+            <div className="w-full lg:w-1/2">
+                <div className="relative rounded-2xl overflow-hidden border-2 border-[var(--border-color)] shadow-2xl hover:border-violet-500/50 transition-all duration-300">
+                    <video
+                        ref={videoRef}
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-auto"
+                    >
+                        <source src={videoSrc} type="video/webm" />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="w-full lg:w-1/2 space-y-4">
+                <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                        {stepNumber}
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-bold text-[var(--text-primary)]">{title}</h3>
+                </div>
+                <p className="text-lg text-[var(--text-secondary)] leading-relaxed">{description}</p>
+            </div>
+        </div>
+    );
+};
+
+// How It Works Section
+const HowItWorksSection: React.FC = () => (
+    <section id="how-it-works" className="py-20 bg-[var(--bg-secondary)]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <AnimatedSection>
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+                    <p className="max-w-2xl mx-auto text-lg text-[var(--text-secondary)]">
+                        From setup to engagement in three simple steps
+                    </p>
+                </div>
+            </AnimatedSection>
+
+            <div className="max-w-6xl mx-auto space-y-20">
+                <VideoStep
+                    videoSrc="/wwe/scene-1 (3).webm"
+                    stepNumber={1}
+                    title="Create Your Campaign"
+                    description="Set up targeted campaigns with your keywords, negative filters, and target communities. Our AI will scan Reddit and Twitter to find the most relevant conversations where your potential customers are actively discussing their problems."
+                    reverse={false}
+                />
+
+                <VideoStep
+                    videoSrc="/wwe/scene-3 (1).webm"
+                    stepNumber={2}
+                    title="Review AI-Filtered Leads"
+                    description="Sales Flow automatically scores and ranks each post based on relevance. Browse through high-quality leads that match your criteria, with engagement metrics and context to help you prioritize the best opportunities."
+                    reverse={true}
+                />
+
+                <VideoStep
+                    videoSrc="/wwe/scene-5 (3).webm"
+                    stepNumber={3}
+                    title="Engage with AI-Powered Comments"
+                    description="Generate natural, context-aware comments with our AI assistant. Choose your tone, customize your message, and engage authentically. Track your outreach and manage all your conversations in one place."
+                    reverse={false}
+                />
+            </div>
+        </div>
+    </section>
+);
+
 // Our Story Section
 const StorySection: React.FC = () => (
     <section id="story" className="py-20">
@@ -360,6 +458,7 @@ const LandingPage: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }> = 
             <main>
                 <HeroSection onLogin={onLogin} />
                 <FeaturesSection />
+                <HowItWorksSection />
                 <SocialProof />
                 <TestimonialCards />
                 <StorySection />
