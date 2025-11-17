@@ -4,6 +4,29 @@ If you're getting errors when running the migration, follow this guide.
 
 ---
 
+## ❌ Error: "policy already exists"
+
+### What it means:
+You've already run part of the migration, and some policies or tables already exist.
+
+### Solution: Use the Cleanup Script (Recommended)
+
+Use `supabase_cleanup_and_migrate.sql` to clean up and start fresh:
+
+1. Open Supabase SQL Editor
+2. Copy contents of `supabase_cleanup_and_migrate.sql`
+3. Click "Run"
+
+**This will:**
+- Drop existing policies
+- Drop existing tables (⚠️ deletes data!)
+- Create fresh tables
+- Set up all policies and triggers
+
+**Note:** Only use this if you haven't added important data yet!
+
+---
+
 ## ❌ Error: "operator does not exist: uuid = text"
 
 ### What it means:

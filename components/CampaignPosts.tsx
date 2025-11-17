@@ -4,6 +4,8 @@ import { StarIcon, FilterIcon, ClockIcon, CloseIcon, LinkIcon, RedditIcon, Twitt
 import CommentModal from './CommentModal';
 import AiResponseGeneratorModal from './AiResponseGeneratorModal';
 import ConfirmationModal from './ConfirmationModal';
+import SubredditRules from './SubredditRules';
+import PostComposer from './PostComposer';
 import { generateComment } from '../services/geminiService';
 import { whopService } from '../services/whopService';
 
@@ -26,9 +28,10 @@ const PostCard: React.FC<{
     post: Post; 
     onComment: (post: Post) => void; 
     onViewPost: (post: Post) => void;
+    onViewRules: (subreddit: string) => void;
     websiteUrl?: string;
     hasSubscription: boolean;
-}> = ({ post, onComment, onViewPost, websiteUrl, hasSubscription }) => {
+}> = ({ post, onComment, onViewPost, onViewRules, websiteUrl, hasSubscription }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const buttonLabel = post.status === 'contacted' ? 'Generate New Comment' : 'Generate AI Comment';
     const buttonDisabled = false; // Always allow generating comments
@@ -39,10 +42,19 @@ const PostCard: React.FC<{
         <div className="bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] overflow-hidden flex flex-col transition-all duration-300 hover:border-[var(--brand-primary)]/50 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-1">
             <div className="p-6 flex-grow">
                 <div className="flex justify-between items-start gap-4 mb-4">
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
                         {post.source === 'reddit' && <RedditIcon className="w-5 h-5 text-orange-500 flex-shrink-0" />}
                         {post.source === 'twitter' && <TwitterIcon className="w-5 h-5 text-sky-400 flex-shrink-0" />}
                         <p className="font-semibold text-[var(--text-primary)] text-opacity-80 truncate">{post.sourceName}</p>
+                        {post.source === 'reddit' && (
+                            <button
+                                onClick={() => onViewRules(post.sourceName.replace('r/', ''))}
+                                className="text-violet-400 hover:text-violet-300 text-xs font-medium flex items-center gap-1 transition-colors"
+                                title="View subreddit rules"
+                            >
+                                📋 Rules
+                            </button>
+                        )}
                     </div>
                     <div className={`flex items-center gap-2 font-bold px-3 py-1.5 rounded-full text-sm ${relevanceColor} flex-shrink-0`}>
                         <StarIcon className="w-4 h-4" />
@@ -166,6 +178,8 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
     const [refreshResult, setRefreshResult] = useState<number | null>(null);
     const [hasSubscription, setHasSubscription] = useState<boolean>(false);
     const [isCheckingSubscription, setIsCheckingSubscription] = useState<boolean>(true);
+    const [selectedSubredditForRules, setSelectedSubredditForRules] = useState<string | null>(null);
+    const [showPostComposer, setShowPostComposer] = useState(false);
 
     // Check subscription status on mount and when user changes
     useEffect(() => {
@@ -298,7 +312,13 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                      <button onClick={onBack} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors mb-2 text-sm">← Back to Campaigns</button>
                      <h1 className="text-3xl font-bold">{campaign.name}</h1>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                     <button 
+                        onClick={() => setShowPostComposer(true)}
+                        className="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                     >
+                        ✍️ Create Post
+                     </button>
                      <button onClick={() => setDeleteModalOpen(true)} className="bg-red-500/20 text-red-400 font-semibold px-4 py-2 rounded-lg hover:bg-red-500/30 transition-colors">Delete Campaign</button>
                      <button onClick={handleRefreshClick} disabled={isRefreshing} className="bg-[var(--brand-primary)] text-white font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed">
                         {isRefreshing ? (
@@ -362,6 +382,7 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                                 post={post} 
                                 onComment={() => handleOpenCommentModal(post)} 
                                 onViewPost={handleViewPost}
+                                onViewRules={(subreddit) => setSelectedSubredditForRules(subreddit)}
                                 websiteUrl={campaign.websiteUrl} 
                                 hasSubscription={hasSubscription}
                             />
@@ -444,6 +465,26 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                 message={`Are you sure you want to delete the "${campaign.name}" campaign? This action cannot be undone.`}
                 confirmButtonText="Delete"
             />
+            
+            {selectedSubredditForRules && (
+                <SubredditRules
+                    subreddit={selectedSubredditForRules}
+                    onClose={() => setSelectedSubredditForRules(null)}
+                />
+            )}
+            
+            {showPostComposer && (
+                <PostComposer
+                    campaign={campaign}
+                    selectedSubreddits={campaign.subreddits || []}
+                    onClose={() => setShowPostComposer(false)}
+                    onPostsCreated={(posts) => {
+                        console.log('Posts created:', posts);
+                        // TODO: Save posts to database
+                        setShowPostComposer(false);
+                    }}
+                />
+            )}
         </div>
     );
 };
