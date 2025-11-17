@@ -5,6 +5,7 @@ import apiKeyManager from './apiKeyManager';
 import { redditOAuthService } from './redditOAuthService';
 import { twitterService } from './twitterService';
 import { deepseekService } from './deepseekService';
+import { grokService } from './grokService';
 
 // Initialize Gemini AI client with first available API key
 let currentApiKey = apiKeyManager.getNextApiKey();
@@ -513,6 +514,21 @@ export const generateComment = async (
           return deepseekResponse;
         } catch (deepseekError) {
           console.error('❌ DeepSeek fallback also failed:', deepseekError);
+          // Try Grok as final fallback
+          if (grokService.isConfigured()) {
+            console.warn('⚠️ DeepSeek failed, trying Grok (xAI) as final fallback...');
+            try {
+              const grokResponse = await grokService.generateContent(prompt);
+              if (!grokResponse || grokResponse.trim().length === 0) {
+                throw new Error('Empty response from Grok');
+              }
+              console.log('✅ Comment generated with Grok');
+              return grokResponse;
+            } catch (grokError) {
+              console.error('❌ All AI services failed (Gemini, DeepSeek, Grok)');
+              throw new Error('All AI services are currently unavailable. Please try again in a moment.');
+            }
+          }
           throw new Error('AI services are currently overloaded. Please try again in a moment.');
         }
       } else {

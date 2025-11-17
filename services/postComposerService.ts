@@ -4,6 +4,7 @@
 import { supabase } from './supabaseClient';
 import { GoogleGenAI } from "@google/genai";
 import { deepseekService } from './deepseekService';
+import { grokService } from './grokService';
 import apiKeyManager from './apiKeyManager';
 
 // Initialize Gemini AI client
@@ -140,6 +141,17 @@ Generate the post now:`;
                     return this.parsePostResponse(deepseekResponse);
                 } catch (deepseekError) {
                     console.error('❌ DeepSeek fallback also failed:', deepseekError);
+                    // Try Grok as final fallback
+                    if (grokService.isConfigured()) {
+                        console.warn('⚠️ DeepSeek failed, trying Grok (xAI) as final fallback...');
+                        try {
+                            const grokResponse = await grokService.generateContent(prompt);
+                            return this.parsePostResponse(grokResponse);
+                        } catch (grokError) {
+                            console.error('❌ All AI services failed (Gemini, DeepSeek, Grok)');
+                            throw new Error('All AI services are currently unavailable. Please try again in a moment.');
+                        }
+                    }
                     throw new Error('Both AI services are currently unavailable. Please try again in a moment.');
                 }
             }
