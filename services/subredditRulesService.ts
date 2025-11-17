@@ -63,7 +63,7 @@ class SubredditRulesService {
     }
 
     /**
-     * Fetch rules directly from Reddit API
+     * Fetch rules directly from Reddit API via proxy
      */
     private async fetchFromReddit(subredditName: string): Promise<SubredditRules> {
         const cleanName = subredditName.replace(/^r\//, '');
@@ -73,14 +73,21 @@ class SubredditRulesService {
         const aboutUrl = `https://www.reddit.com/r/${cleanName}/about.json`;
 
         try {
-            // Fetch rules
-            const rulesResponse = await fetch(rulesUrl, {
-                headers: { 'User-Agent': 'SalesFlow/1.0' }
+            // Always use Netlify proxy in production to avoid CORS
+            console.log('📡 Using Netlify proxy for rules...');
+            
+            // Fetch rules via proxy
+            const rulesResponse = await fetch('/.netlify/functions/reddit-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: rulesUrl })
             });
 
-            // Fetch subreddit info
-            const aboutResponse = await fetch(aboutUrl, {
-                headers: { 'User-Agent': 'SalesFlow/1.0' }
+            // Fetch subreddit info via proxy
+            const aboutResponse = await fetch('/.netlify/functions/reddit-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: aboutUrl })
             });
 
             if (!rulesResponse.ok || !aboutResponse.ok) {
