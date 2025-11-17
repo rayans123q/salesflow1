@@ -79,13 +79,17 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
     return (
         <div ref={overlayRef} className="fixed inset-0 bg-black/80 z-40 overflow-y-auto overscroll-contain" onClick={onClose} style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="min-h-screen flex items-start sm:items-center justify-center p-2 sm:p-4 py-4 sm:py-8">
-                <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[95vh] my-auto" onClick={(e) => e.stopPropagation()}>
-                <button onClick={onClose} className="absolute top-3 right-3 sm:top-4 sm:right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
-                    <CloseIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-                <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-center">🤖 AI Response Generator</h2>
+                <div className="bg-[var(--bg-secondary)] w-full max-w-lg rounded-xl sm:rounded-2xl border border-[var(--border-color)] shadow-2xl relative flex flex-col max-h-[90vh] my-auto" onClick={(e) => e.stopPropagation()}>
+                {/* Header - Fixed */}
+                <div className="flex-shrink-0 p-4 sm:p-6 md:p-8 pb-0">
+                    <button onClick={onClose} className="absolute top-3 right-3 sm:top-4 sm:right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors z-10">
+                        <CloseIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </button>
+                    <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-center">🤖 AI Response Generator</h2>
+                </div>
                 
-                <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 -mr-1 sm:-mr-2 space-y-4 sm:space-y-6 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 space-y-4 sm:space-y-6 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {/* Tone */}
                     <div>
                         <label className="block text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-2">Response Style (Tone)</label>
@@ -172,7 +176,8 @@ const AiResponseGeneratorModal: React.FC<AiResponseGeneratorModalProps> = ({ cam
                     )}
                 </div>
                 
-                <div className="flex flex-col sm:flex-row justify-end items-center gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[var(--border-color)]">
+                {/* Footer - Fixed at bottom */}
+                <div className="flex-shrink-0 flex flex-col sm:flex-row justify-end items-center gap-3 sm:gap-4 p-4 sm:p-6 md:p-8 pt-4 sm:pt-6 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]">
                      {preview && !isGenerating ? (
                         <>
                              <button onClick={handleGenerate} className="flex items-center justify-center gap-2 bg-black/20 dark:bg-white/10 text-[var(--text-secondary)] font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg hover:bg-black/30 dark:hover:bg-white/20 transition-colors w-full sm:w-auto text-sm sm:text-base">
