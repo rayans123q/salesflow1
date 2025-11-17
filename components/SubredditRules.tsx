@@ -76,8 +76,48 @@ const SubredditRules: React.FC<SubredditRulesProps> = ({ subreddit, onClose }) =
                             )}
 
                             {rules.length === 0 ? (
-                                <div className="text-center py-8 text-[var(--text-secondary)]">
-                                    No specific rules found. Always follow Reddit's content policy.
+                                <div className="space-y-4">
+                                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                                        <h3 className="font-bold text-yellow-400 mb-2">⚠️ No Specific Rules Found</h3>
+                                        <p className="text-sm text-[var(--text-secondary)]">
+                                            This subreddit may not have published rules via the API, or they may be private. 
+                                            Always check the subreddit's sidebar and follow Reddit's general guidelines.
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                                        <h3 className="font-bold text-[var(--text-primary)] mb-3">📜 General Reddit Guidelines</h3>
+                                        <div className="space-y-3">
+                                            <div className="flex items-start gap-3">
+                                                <span className="text-xl">🤝</span>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm">Be Respectful</h4>
+                                                    <p className="text-xs text-[var(--text-secondary)]">Treat others with respect. No harassment or personal attacks.</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <span className="text-xl">🚫</span>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm">No Spam</h4>
+                                                    <p className="text-xs text-[var(--text-secondary)]">Avoid excessive self-promotion. Contribute meaningfully.</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <span className="text-xl">🎯</span>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm">Stay On Topic</h4>
+                                                    <p className="text-xs text-[var(--text-secondary)]">Keep posts relevant to the subreddit's theme.</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <span className="text-xl">📖</span>
+                                                <div>
+                                                    <h4 className="font-semibold text-sm">Follow Reddit Policy</h4>
+                                                    <p className="text-xs text-[var(--text-secondary)]">Adhere to Reddit's site-wide content policy.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 rules.map((rule, index) => (
