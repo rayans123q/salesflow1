@@ -1,5 +1,5 @@
 // Service Worker for SalesFlow PWA
-const CACHE_NAME = 'salesflow-v1';
+const CACHE_NAME = 'salesflow-v2'; // Increment version to force cache refresh
 const urlsToCache = [
   '/',
   '/index.html',
