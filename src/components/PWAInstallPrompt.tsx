@@ -29,7 +29,13 @@ const PWAInstallPrompt: React.FC = () => {
       setShowInstallButton(true);
     };
 
+    // Listen for custom install button click from landing page
+    const handleCustomInstallClick = () => {
+      handleInstallClick();
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-install-click', handleCustomInstallClick);
 
     // For iOS, show install button if not installed
     if (iOS && !window.navigator.standalone) {
@@ -38,6 +44,7 @@ const PWAInstallPrompt: React.FC = () => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-install-click', handleCustomInstallClick);
     };
   }, []);
 

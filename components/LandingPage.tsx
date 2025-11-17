@@ -305,6 +305,28 @@ const PricingSection: React.FC<{ onLogin: (mode?: 'signup' | 'login') => void }>
                         <div className="lg:col-span-2 space-y-4">
                             <AnimatedSection>
                                 <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] text-center" style={{'--stagger-delay': '150ms'} as React.CSSProperties}>
+                                    <h3 className="text-xl font-bold mb-4">📱 Download the App</h3>
+                                    <p className="text-[var(--text-secondary)] mb-4">Install Sales Flow on your device for quick access. Works on Android, iOS, Windows, Mac, and Linux.</p>
+                                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                        <button
+                                            onClick={() => {
+                                                // Trigger PWA install
+                                                const event = new CustomEvent('pwa-install-click');
+                                                window.dispatchEvent(event);
+                                            }}
+                                            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Install App
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-3">Free • No download required • Instant access</p>
+                                </div>
+                            </AnimatedSection>
+                            <AnimatedSection>
+                                <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] text-center" style={{'--stagger-delay': '200ms'} as React.CSSProperties}>
                                     <h3 className="text-xl font-bold mb-4">Need More?</h3>
                                     <p className="text-[var(--text-secondary)] mb-4">More plans with higher limits and team features are coming soon. Contact us for early access.</p>
                                     <button
