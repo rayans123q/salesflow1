@@ -330,10 +330,26 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                      <button 
-                        onClick={() => setShowPostComposer(true)}
-                        className="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        onClick={() => {
+                            if (!hasSubscription) {
+                                console.log('🔒 Subscription required for post creation - redirecting to checkout');
+                                whopService.redirectToCheckout(userEmail);
+                            } else {
+                                setShowPostComposer(true);
+                            }
+                        }}
+                        className={`font-semibold px-4 py-2 rounded-lg transition-opacity flex items-center justify-center gap-2 relative ${
+                            !hasSubscription 
+                                ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white'
+                                : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:opacity-90'
+                        }`}
                      >
-                        ✍️ Create Post
+                        {!hasSubscription && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                🔒
+                            </span>
+                        )}
+                        ✍️ {!hasSubscription ? 'Unlock Post Creation' : 'Create Post'}
                      </button>
                      <button onClick={() => setDeleteModalOpen(true)} className="bg-red-500/20 text-red-400 font-semibold px-4 py-2 rounded-lg hover:bg-red-500/30 transition-colors">Delete Campaign</button>
                      <button onClick={handleRefreshClick} disabled={isRefreshing} className="bg-[var(--brand-primary)] text-white font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed">
@@ -486,6 +502,12 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                 <SubredditRules
                     subreddit={selectedSubredditForRules}
                     onClose={() => setSelectedSubredditForRules(null)}
+                    hasSubscription={hasSubscription}
+                    onSubscriptionRequired={() => {
+                        console.log('🔒 Subscription required for rules - redirecting to checkout');
+                        whopService.redirectToCheckout(userEmail);
+                        setSelectedSubredditForRules(null);
+                    }}
                 />
             )}
             
@@ -497,6 +519,12 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                     onPostsCreated={(posts) => {
                         console.log('Posts created:', posts);
                         // TODO: Save posts to database
+                        setShowPostComposer(false);
+                    }}
+                    hasSubscription={hasSubscription}
+                    onSubscriptionRequired={() => {
+                        console.log('🔒 Subscription required for post generation - redirecting to checkout');
+                        whopService.redirectToCheckout(userEmail);
                         setShowPostComposer(false);
                     }}
                 />

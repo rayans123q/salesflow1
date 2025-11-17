@@ -7,9 +7,18 @@ interface PostComposerProps {
     selectedSubreddits: string[];
     onClose: () => void;
     onPostsCreated: (posts: any[]) => void;
+    hasSubscription?: boolean;
+    onSubscriptionRequired?: () => void;
 }
 
-const PostComposer: React.FC<PostComposerProps> = ({ campaign, selectedSubreddits, onClose, onPostsCreated }) => {
+const PostComposer: React.FC<PostComposerProps> = ({ 
+    campaign, 
+    selectedSubreddits, 
+    onClose, 
+    onPostsCreated,
+    hasSubscription = false,
+    onSubscriptionRequired
+}) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [selectedSubreddit, setSelectedSubreddit] = useState(selectedSubreddits[0] || '');
@@ -18,6 +27,14 @@ const PostComposer: React.FC<PostComposerProps> = ({ campaign, selectedSubreddit
     const [isCheckingRules, setIsCheckingRules] = useState(false);
 
     const handleGeneratePost = async () => {
+        // Check subscription before generating
+        if (!hasSubscription) {
+            if (onSubscriptionRequired) {
+                onSubscriptionRequired();
+            }
+            return;
+        }
+
         if (!selectedSubreddit) return;
         
         setIsGenerating(true);
@@ -109,8 +126,17 @@ const PostComposer: React.FC<PostComposerProps> = ({ campaign, selectedSubreddit
                         <button
                             onClick={handleGeneratePost}
                             disabled={isGenerating || !selectedSubreddit}
-                            className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold px-4 py-3 rounded-lg hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
+                            className={`w-full font-semibold px-4 py-3 rounded-lg flex items-center justify-center gap-2 relative ${
+                                !hasSubscription 
+                                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white cursor-pointer'
+                                    : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:opacity-90 disabled:opacity-60'
+                            }`}
                         >
+                            {!hasSubscription && (
+                                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                    🔒 Pro
+                                </span>
+                            )}
                             {isGenerating ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -119,7 +145,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ campaign, selectedSubreddit
                             ) : (
                                 <>
                                     <SparkleIcon className="w-5 h-5" />
-                                    Generate AI Post
+                                    {!hasSubscription ? 'Unlock AI Post Generation' : 'Generate AI Post'}
                                 </>
                             )}
                         </button>

@@ -10,14 +10,27 @@ interface SubredditRule {
 interface SubredditRulesProps {
     subreddit: string;
     onClose: () => void;
+    hasSubscription?: boolean;
+    onSubscriptionRequired?: () => void;
 }
 
-const SubredditRules: React.FC<SubredditRulesProps> = ({ subreddit, onClose }) => {
+const SubredditRules: React.FC<SubredditRulesProps> = ({ 
+    subreddit, 
+    onClose,
+    hasSubscription = false,
+    onSubscriptionRequired
+}) => {
     const [rules, setRules] = useState<SubredditRule[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [postingRequirements, setPostingRequirements] = useState<string>('');
 
     useEffect(() => {
+        // Check subscription before fetching rules
+        if (!hasSubscription) {
+            setIsLoading(false);
+            return;
+        }
+
         const fetchRules = async () => {
             setIsLoading(true);
             try {
@@ -33,7 +46,7 @@ const SubredditRules: React.FC<SubredditRulesProps> = ({ subreddit, onClose }) =
         };
 
         fetchRules();
-    }, [subreddit]);
+    }, [subreddit, hasSubscription]);
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
@@ -62,7 +75,33 @@ const SubredditRules: React.FC<SubredditRulesProps> = ({ subreddit, onClose }) =
                     <h2 className="text-2xl font-bold mb-2">📋 r/{subreddit} Rules</h2>
                     <p className="text-[var(--text-secondary)] mb-6">Follow these rules to avoid getting banned</p>
 
-                    {isLoading ? (
+                    {!hasSubscription ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-12 space-y-6">
+                            <div className="text-6xl">🔒</div>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-xl font-bold text-[var(--text-primary)]">Subreddit Rules Locked</h3>
+                                <p className="text-[var(--text-secondary)] max-w-md">
+                                    Upgrade to Pro to view detailed subreddit rules and posting requirements. 
+                                    This helps you create compliant posts that won't get removed!
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (onSubscriptionRequired) {
+                                        onSubscriptionRequired();
+                                    }
+                                }}
+                                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold px-8 py-3 rounded-lg transition-all transform hover:scale-105"
+                            >
+                                🚀 Upgrade to Pro
+                            </button>
+                            <div className="text-xs text-[var(--text-secondary)] text-center max-w-sm">
+                                <p>✨ Unlock AI post generation</p>
+                                <p>📋 View all subreddit rules</p>
+                                <p>💬 Generate unlimited comments</p>
+                            </div>
+                        </div>
+                    ) : isLoading ? (
                         <div className="flex items-center justify-center py-12">
                             <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
                         </div>
