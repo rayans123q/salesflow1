@@ -463,17 +463,77 @@ export const generateComment = async (
   `;
   
   try {
+    console.log('🤖 Generating comment with Gemini...');
     const response = await getAiClient().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text ?? '';
-  } catch (error) {
-    if (handleApiError(error)) {
-      // Retry with new key
-      return generateComment(post, campaign, styleSettings);
+    
+    const commentText = response.text ?? '';
+    if (!commentText || commentText.trim().length === 0) {
+      throw new Error('Empty response from AI');
     }
-    throw error;
+    
+    console.log('✅ Comment generated successfully');
+    return commentText;
+    
+  } catch (error: any) {
+    console.error('❌ Comment generation failed:', error);
+    
+    // Check if it's an overload error (503)
+    const isOverloaded = error?.message?.includes('503') || 
+                       error?.message?.includes('overloaded') || 
+                       error?.message?.includes('UNAVAILABLE');
+    
+    if (isOverloaded) {
+      // Try DeepSeek fallback if available
+      if (deepseekService.isConfigured()) {
+        console.warn('⚠️ Gemini overloaded, falling back to DeepSeek...');
+        try {
+          const deepseekResponse = await deepseekService.generateContent(prompt);
+          if (!deepseekResponse || deepseekResponse.trim().length === 0) {
+            throw new Error('Empty response from DeepSeek');
+          }
+          console.log('✅ Comment generated with DeepSeek');
+          return deepseekResponse;
+        } catch (deepseekError) {
+          console.error('❌ DeepSeek fallback also failed:', deepseekError);
+          throw new Error('AI services are currently overloaded. Please try again in a moment.');
+        }
+      } else {
+        throw new Error('AI service is currently overloaded. Please try again in a moment.');
+      }
+    }
+    
+    // Try switching API keys for other errors
+    if (handleApiError(error)) {
+      console.log('🔄 Retrying with new API key...');
+      try {
+        const response = await getAiClient().models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
+        const commentText = response.text ?? '';
+        if (!commentText || commentText.trim().length === 0) {
+          throw new Error('Empty response from AI');
+        }
+        return commentText;
+      } catch (retryError: any) {
+        // If retry also fails with overload, try DeepSeek
+        if ((retryError?.message?.includes('503') || retryError?.message?.includes('overloaded')) && 
+            deepseekService.isConfigured()) {
+          console.warn('⚠️ Gemini still overloaded, using DeepSeek...');
+          const deepseekResponse = await deepseekService.generateContent(prompt);
+          if (!deepseekResponse || deepseekResponse.trim().length === 0) {
+            throw new Error('Empty response from DeepSeek');
+          }
+          return deepseekResponse;
+        }
+        throw new Error('Failed to generate comment. Please try again.');
+      }
+    }
+    
+    throw new Error('Failed to generate comment. Please try again.');
   }
 };
 

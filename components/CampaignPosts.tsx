@@ -233,19 +233,35 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
     const handleGeneratePreview = async (styleSettings: AIStyleSettings) => {
         if (!selectedPost) return;
 
-        const canGenerate = await onGenerateAiResponse();
-        if (!canGenerate) {
-            setAiModalOpen(false); // Close modal if limit is reached
-            return;
-        }
-
         setIsGenerating(true);
         setPreviewText(''); // Clear previous preview
+        
         try {
+            // Generate the comment FIRST (before consuming credit)
             const response = await generateComment(selectedPost, campaign, styleSettings);
-            setPreviewText(response);
-        } catch (error) {
-            console.error(error);
+            
+            // Only consume credit if generation was successful
+            if (response && response.trim().length > 0) {
+                const canGenerate = await onGenerateAiResponse();
+                if (!canGenerate) {
+                    // User hit limit during generation - show the response but warn them
+                    setPreviewText(response + '\n\n⚠️ Note: You have reached your AI response limit.');
+                } else {
+                    setPreviewText(response);
+                }
+            } else {
+                throw new Error('Empty response from AI');
+            }
+        } catch (error: any) {
+            console.error('Failed to generate comment:', error);
+            
+            // Show user-friendly error message
+            const errorMessage = error?.message || 'Failed to generate comment';
+            if (errorMessage.includes('overloaded') || errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE')) {
+                setPreviewText('⚠️ AI service is currently overloaded. Please try again in a moment.\n\n(No credit was consumed)');
+            } else {
+                setPreviewText(`⚠️ ${errorMessage}\n\nPlease try again. (No credit was consumed)`);
+            }
         } finally {
             setIsGenerating(false);
         }
