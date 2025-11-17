@@ -80,3 +80,86 @@ export interface OnboardingStep {
   position?: 'top' | 'bottom' | 'left' | 'right';
   beaconPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 }
+
+// Advanced Features Types
+export interface DiscoveredSubreddit {
+  name: string;
+  matchScore: number;
+  subscriberCount: number;
+  description: string;
+  activeUsers?: number;
+  postsPerDay?: number;
+}
+
+export interface SubredditRule {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface SubredditRulesData {
+  subreddit: string;
+  rules: SubredditRule[];
+  postingRequirements: string;
+  karmaRequired?: number;
+  accountAgeRequired?: number;
+  lastFetched: string;
+}
+
+export interface ScheduledPost {
+  id: number;
+  campaignId: number;
+  subreddit: string;
+  title: string;
+  content: string;
+  scheduledTime: string;
+  status: 'pending' | 'posted' | 'failed';
+  redditPostId?: string;
+  engagementScore?: number;
+  postedAt?: string;
+}
+
+export interface SubredditInsight {
+  subreddit: string;
+  bestPostingTimes: { hour: number; score: number }[];
+  avgEngagement: number;
+  topKeywords: string[];
+  topPostExamples: { title: string; score: number; url: string }[];
+  lastAnalyzed: string;
+}
+
+export interface TrackedLink {
+  id: number;
+  shortCode: string;
+  originalUrl: string;
+  campaignId: number;
+  clicks: number;
+  createdAt: string;
+}
+
+export interface LinkClick {
+  id: number;
+  linkId: number;
+  clickedAt: string;
+  referrer?: string;
+  userAgent?: string;
+  country?: string;
+}
+
+export interface AutoReplySettings {
+  id: number;
+  campaignId: number;
+  enabled: boolean;
+  maxRepliesPerHour: number;
+  triggerKeywords: string[];
+  lastReplyAt?: string;
+}
+
+export interface Project {
+  id: number;
+  userId: string;
+  name: string;
+  websiteUrl?: string;
+  description: string;
+  createdAt: string;
+}
