@@ -70,11 +70,46 @@ class SubredditRulesService {
         const cleanName = subredditName.replace(/^r\//, '');
 
         // Try Reddit API with improved proxy
-        const rulesUrl = `https://www.reddit.com/r/${cleanName}/about/rules.json`;
-        const aboutUrl = `https://www.reddit.com/r/${cleanName}/about.json`;
-
         try {
-            console.log('📡 Fetching real rules from Reddit...');
+            console.log('🕷️ Scraping real rules from Reddit HTML...');
+            
+            // Use web scraper to get actual rules from Reddit page
+            const scraperResponse = await fetch('/.netlify/functions/scrape-reddit-rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subreddit: cleanName })
+            });
+
+            if (scraperResponse.ok) {
+                const scraperData = await scraperResponse.json();
+                
+                if (scraperData.rules && scraperData.rules.length > 0) {
+                    console.log(`✅ Scraped ${scraperData.rules.length} REAL rules from r/${cleanName}`);
+                    
+                    return {
+                        subreddit_name: cleanName,
+                        rules: scraperData.rules.map((r: any, i: number) => ({
+                            title: r.title,
+                            description: r.description,
+                            kind: 'all',
+                            priority: i
+                        })),
+                        posting_requirements: 'Rules scraped from subreddit page. Always verify on Reddit before posting.',
+                        karma_requirement: 0,
+                        account_age_days: 0,
+                        allows_links: true,
+                        allows_images: true,
+                        allows_videos: true,
+                        last_fetched: new Date().toISOString()
+                    };
+                }
+            }
+
+            console.warn('⚠️ Scraping failed, trying Reddit API...');
+            
+            // Fallback to Reddit API
+            const rulesUrl = `https://www.reddit.com/r/${cleanName}/about/rules.json`;
+            const aboutUrl = `https://www.reddit.com/r/${cleanName}/about.json`;
             
             const rulesResponse = await fetch('/.netlify/functions/reddit-proxy', {
                 method: 'POST',
@@ -89,12 +124,12 @@ class SubredditRulesService {
             });
 
             if (!rulesResponse.ok || !aboutResponse.ok) {
-                console.warn(`⚠️ Reddit API failed (${rulesResponse.status}), using AI-generated rules`);
+                console.warn(`⚠️ Reddit API also failed, using AI fallback`);
                 return await this.getDefaultRules(cleanName);
             }
 
             const rulesData = await rulesResponse.json();
-            const aboutData = await aboutResponse.json();
+            const aboutData = await rulesResponse.json();
 
             const subredditInfo = aboutData.data;
             const rules: SubredditRule[] = [];
