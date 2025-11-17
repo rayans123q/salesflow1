@@ -40,7 +40,7 @@ class GrokService {
               content: prompt
             }
           ],
-          model: 'grok-beta',
+          model: 'grok-4-latest',
           stream: false,
           temperature: 0.7
         })
