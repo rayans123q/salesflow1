@@ -89,8 +89,8 @@ class SubredditRulesService {
             });
 
             if (!rulesResponse.ok || !aboutResponse.ok) {
-                console.warn(`⚠️ Reddit API failed (${rulesResponse.status}), using defaults`);
-                return this.getDefaultRules(cleanName);
+                console.warn(`⚠️ Reddit API failed (${rulesResponse.status}), using AI-generated rules`);
+                return await this.getDefaultRules(cleanName);
             }
 
             const rulesData = await rulesResponse.json();
@@ -128,14 +128,90 @@ class SubredditRulesService {
 
         } catch (error) {
             console.error(`❌ Reddit API fetch failed for r/${cleanName}:`, error);
-            throw error;
+            console.log('🤖 Falling back to AI-generated rules...');
+            return await this.getDefaultRules(cleanName);
         }
     }
 
     /**
-     * Get default rules when Reddit API is unavailable
+     * Get subreddit-specific rules using AI when Reddit API is unavailable
+     * This generates realistic rules based on the subreddit name and common patterns
      */
-    private getDefaultRules(subredditName: string): SubredditRules {
+    private async getDefaultRules(subredditName: string): Promise<SubredditRules> {
+        console.log(`🤖 Generating realistic rules for r/${subredditName} using AI...`);
+        
+        try {
+            // Use Gemini to generate realistic subreddit-specific rules
+            const { GoogleGenAI } = await import("@google/genai");
+            const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+            
+            if (!apiKey) {
+                return this.getFallbackRules(subredditName);
+            }
+            
+            const ai = new GoogleGenAI({ apiKey });
+            
+            const prompt = `Generate realistic posting rules for the subreddit r/${subredditName}.
+
+Based on the subreddit name and common Reddit patterns, create 4-6 specific rules that would likely exist for this community.
+
+**SUBREDDIT:** r/${subredditName}
+
+**RETURN JSON:**
+\`\`\`json
+{
+  "rules": [
+    {
+      "title": "Rule title",
+      "description": "Detailed description of the rule"
+    }
+  ],
+  "posting_requirements": "Brief summary of posting requirements",
+  "allows_self_promotion": true/false
+}
+\`\`\`
+
+Make the rules specific to this subreddit's likely topic and community culture.`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            
+            const responseText = response.text || '{}';
+            const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
+            const aiRules = JSON.parse(jsonStr.trim());
+            
+            console.log(`✅ Generated ${aiRules.rules.length} AI rules for r/${subredditName}`);
+            
+            return {
+                subreddit_name: subredditName,
+                rules: aiRules.rules.map((r: any, i: number) => ({
+                    title: r.title,
+                    description: r.description,
+                    kind: 'all',
+                    priority: i
+                })),
+                posting_requirements: aiRules.posting_requirements || 'Check subreddit sidebar before posting.',
+                karma_requirement: 0,
+                account_age_days: 0,
+                allows_links: aiRules.allows_self_promotion !== false,
+                allows_images: true,
+                allows_videos: true,
+                last_fetched: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error('❌ AI rule generation failed:', error);
+            return this.getFallbackRules(subredditName);
+        }
+    }
+
+    /**
+     * Get generic fallback rules when both Reddit API and AI fail
+     */
+    private getFallbackRules(subredditName: string): SubredditRules {
         return {
             subreddit_name: subredditName,
             rules: [
