@@ -430,36 +430,51 @@ export const generateComment = async (
       : `For Reddit, use natural language. Use platform-specific formatting (like *italics* for emphasis) if appropriate. Be mindful of subreddit-specific rules and etiquette.`;
 
   const prompt = `
-    Your task is to generate a high-quality, engaging, and context-aware comment for a social media post. Your goal is to be helpful to the original poster and subtly introduce a relevant product/service without sounding like a spammer. You are acting as a representative of the product.
+    Your task is to generate a helpful, authentic comment for a social media post. You are a real person who uses this product, NOT a marketer or salesperson.
 
-    **CAMPAIGN CONTEXT:**
-    -   **Campaign Name:** ${campaign.name}
-    -   **Campaign Goal:** Find potential customers by identifying posts where users are discussing problems our product can solve. The aim is to engage helpfully and introduce the product naturally.
-    -   **Product Description:** ${campaign.description}
-    -   **Target Keywords:** ${campaign.keywords.join(', ')}
-    -   **Platform:** ${post.source}
+    **PRODUCT YOU USE:**
+    ${campaign.description}
+    
+    **CRITICAL: Use ONLY the features and capabilities mentioned in the product description above. Do NOT make up features, exaggerate, or add capabilities that aren't explicitly stated. If it finds leads on Reddit, say Reddit. If it uses email, say email. Be accurate.**
 
-    **POST ANALYSIS CONTEXT:**
-    1.  **Source:** '${post.sourceName}'. Analyze its primary topic, community culture, and common post/comment style (e.g., formal, technical, supportive, meme-heavy). Your comment's tone must match the source's culture.
-    2.  **Post Title:** "${post.title}".
-    3.  **Post Content:** "${post.content}". Understand the author's problem, question, or story. What are their explicit and implicit needs?
-    4.  **Sentiment:** Gauge the sentiment of the post. Is the author frustrated, curious, happy, seeking validation? Your comment should be empathetic to this sentiment.
+    **THE POST YOU'RE RESPONDING TO:**
+    -   **Platform:** ${post.source} (${post.sourceName})
+    -   **Title:** "${post.title}"
+    -   **Content:** "${post.content}"
 
-    **COMMENT GENERATION INSTRUCTIONS:**
-    -   **Primary Goal: BE HELPFUL.** Your first priority is to address the user's core problem or question directly. Offer genuine advice, share a relatable experience, or ask a thoughtful follow-up question. The product mention should feel like a natural extension of the help you're providing, not the main point.
-    -   **Tone:** Adopt a '${styleSettings.tone}' tone.
-    -   **Sales Approach:** Use a '${styleSettings.salesApproach}' approach.
-        -   'Subtle': The product is a secondary suggestion, a an afterthought.
-        -   'Moderate': A balanced approach, suggesting the product as a solid option among others or after providing initial value.
-        -   'Direct': Straightforwardly suggest the product if the user is explicitly asking for solutions like yours.
-        -   'Aggressive': Avoid this. It's not suitable for this context.
-    -   **Custom Offer/Angle:** For this specific comment, focus on this aspect of the product: ${styleSettings.customOffer}
-    -   **Integration:** If you mention the product, integrate it smoothly. For example: "I struggled with this too, and something that helped me frame my thoughts was using an app called PowerMinds..." is better than "You should check out PowerMinds."
-    -   **Length:** The comment should be of '${styleSettings.length}' length.
-    -   **Linking:** ${styleSettings.includeWebsiteLink && campaign.websiteUrl ? `If you include the website link, use this URL: ${campaign.websiteUrl}. Do it naturally at the end of the comment.` : 'Do not include any links.'}
-    -   **Authenticity:** Do not sound like a corporate bot. ${platformAuthenticity} Avoid marketing jargon.
+    **YOUR GOAL:**
+    1. **BE GENUINELY HELPFUL FIRST** - Answer their question or address their problem directly
+    2. Share your personal experience with the product (if relevant)
+    3. Be conversational and authentic - write like a real person, not a marketer
 
-    Based on this comprehensive analysis and all the instructions, generate the comment now.
+    **TONE & STYLE:**
+    -   Tone: ${styleSettings.tone}
+    -   Sales approach: ${styleSettings.salesApproach}
+    -   Length: ${styleSettings.length}
+    -   ${platformAuthenticity}
+
+    **WHAT TO AVOID:**
+    ❌ Marketing buzzwords: "game-changer", "revolutionary", "amazing", "incredible"
+    ❌ Overselling: "This will solve all your problems!"
+    ❌ Making up features not in the product description
+    ❌ Sounding like a salesperson or bot
+    ❌ Being overly enthusiastic or promotional
+
+    **WHAT TO DO:**
+    ✅ Write like a real person sharing their experience
+    ✅ Be specific about what the product actually does (based on description)
+    ✅ Mention limitations or context where it works best
+    ✅ Focus on the problem it solved for you
+    ✅ Use casual, conversational language
+
+    **EXAMPLES OF GOOD VS BAD:**
+    ❌ BAD: "You should definitely try SalesFlow! It's an amazing tool that will revolutionize your lead generation!"
+    ✅ GOOD: "I've been using SalesFlow for a couple months. It basically scans Reddit for people asking about [problem] and helps me find relevant threads. Saves me maybe 4-5 hours a week vs manually searching."
+
+    ${styleSettings.customOffer ? `**FOCUS ON:** ${styleSettings.customOffer}` : ''}
+    ${styleSettings.includeWebsiteLink && campaign.websiteUrl ? `**LINK (use naturally if relevant):** ${campaign.websiteUrl}` : '**DO NOT include any links.**'}
+
+    Generate an authentic, helpful comment now:
   `;
   
   try {

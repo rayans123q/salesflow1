@@ -76,17 +76,29 @@ class PostComposerService {
 ${productDescription}
 ${websiteUrl ? `Website: ${websiteUrl}` : ''}
 
+**CRITICAL: Use the EXACT product description above. Do NOT make up features, capabilities, or details that aren't mentioned. If the product finds leads on Reddit, say Reddit. If it uses email, say email. Be accurate.**
+
 **SUBREDDIT RULES:**
 ${rulesText}
 
 **REQUIREMENTS:**
 1. The post MUST comply with all subreddit rules
-2. Be authentic and helpful, not overly promotional
-3. Match the tone and style of r/${subreddit}
-4. Provide value to the community
-5. If self-promotion is restricted, focus on asking for feedback or sharing a story
-6. Keep title under 300 characters
-7. Content should be 150-500 words
+2. Be authentic and conversational, NOT salesy or promotional
+3. Write like a real person sharing their experience, not a marketer
+4. Focus on the problem you solved or value you got, not features
+5. Use casual language - avoid marketing buzzwords like "game-changer", "revolutionary", "amazing"
+6. If self-promotion is restricted, ask for feedback or share your journey
+7. Keep title under 300 characters
+8. Content should be 150-400 words
+9. Be specific about what the product actually does based on the description
+10. Don't exaggerate or oversell - be honest and helpful
+
+**TONE EXAMPLES:**
+❌ BAD (too salesy): "This amazing tool revolutionized my workflow! It's a game-changer!"
+✅ GOOD (authentic): "Been using this for a few weeks and it's helped me save about 5 hours/week on lead gen"
+
+❌ BAD (generic): "It helps you find leads and grow your business!"
+✅ GOOD (specific): "It scans Reddit for people asking about [specific problem] and helps me reach out"
 
 **OUTPUT FORMAT (JSON):**
 \`\`\`json
