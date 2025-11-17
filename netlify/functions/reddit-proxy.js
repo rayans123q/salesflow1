@@ -1,8 +1,6 @@
 // Reddit API Proxy - Handles CORS issues for Reddit API requests
 // This function proxies requests to Reddit's API to avoid CORS restrictions
 
-const fetch = require('node-fetch');
-
 exports.handler = async (event) => {
     // Only allow POST requests
     if (event.httpMethod !== 'POST') {
@@ -49,13 +47,25 @@ exports.handler = async (event) => {
             headers
         });
 
+        console.log(`📥 Reddit response status: ${response.status}`);
+
         if (!response.ok) {
+            const errorText = await response.text();
             console.error(`❌ Reddit API error: ${response.status} ${response.statusText}`);
+            console.error(`Error body: ${errorText}`);
+            
             return {
                 statusCode: response.status,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                },
                 body: JSON.stringify({ 
                     error: `Reddit API error: ${response.status}`,
-                    message: response.statusText
+                    message: response.statusText,
+                    details: errorText
                 })
             };
         }
@@ -76,11 +86,20 @@ exports.handler = async (event) => {
 
     } catch (error) {
         console.error('❌ Proxy error:', error);
+        console.error('Error stack:', error.stack);
+        
         return {
             statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
             body: JSON.stringify({ 
                 error: 'Proxy request failed',
-                message: error.message
+                message: error.message,
+                stack: error.stack
             })
         };
     }
