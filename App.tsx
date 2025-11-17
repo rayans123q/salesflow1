@@ -405,12 +405,22 @@ const App: React.FC = () => {
         }
     }, [hasSubscription, user?.id, showPaymentGate]);
 
-    // Track visitor analytics
-    // Track page views when user changes
+    // Track visitor analytics - track ALL visitors (logged in or anonymous)
+    useEffect(() => {
+        // Track page view on mount (once per session)
+        analyticsService.trackPageView(user?.id).catch(err => 
+            console.debug('Analytics tracking failed:', err)
+        );
+    }, []); // Empty dependency array = run once on mount
+    
+    // Track when user logs in
     useEffect(() => {
         if (user?.id) {
-            analyticsService.trackPageView(user.id).catch(err => 
-                console.debug('Analytics tracking failed:', err)
+            analyticsService.trackEvent({ 
+                event_type: 'login', 
+                user_id: user.id 
+            }).catch(err =>
+                console.debug('Login tracking failed:', err)
             );
         }
     }, [user?.id]);
