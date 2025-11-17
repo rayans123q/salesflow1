@@ -119,22 +119,22 @@ BEGIN
     RETURN QUERY
     WITH device_counts AS (
         SELECT 
-            COALESCE(device_type, 'Unknown') as device_type,
-            COUNT(DISTINCT session_id) as visitor_count
-        FROM analytics_events
-        WHERE created_at >= NOW() - (days_back || ' days')::INTERVAL
-        GROUP BY device_type
+            COALESCE(ae.device_type, 'Unknown') as dev_type,
+            COUNT(DISTINCT ae.session_id) as vis_count
+        FROM analytics_events ae
+        WHERE ae.created_at >= NOW() - (days_back || ' days')::INTERVAL
+        GROUP BY ae.device_type
     ),
     total_visitors AS (
-        SELECT SUM(visitor_count) as total FROM device_counts
+        SELECT SUM(vis_count) as total FROM device_counts
     )
     SELECT 
-        dc.device_type,
-        dc.visitor_count,
-        ROUND((dc.visitor_count::NUMERIC / NULLIF(tv.total, 0)) * 100, 2) as percentage
+        dc.dev_type::TEXT,
+        dc.vis_count,
+        ROUND((dc.vis_count::NUMERIC / NULLIF(tv.total, 0)) * 100, 2) as percentage
     FROM device_counts dc
     CROSS JOIN total_visitors tv
-    ORDER BY dc.visitor_count DESC;
+    ORDER BY dc.vis_count DESC;
 END;
 $$;
 
@@ -153,33 +153,33 @@ BEGIN
     WITH source_counts AS (
         SELECT 
             CASE 
-                WHEN utm_source IS NOT NULL THEN utm_source
-                WHEN referrer IS NOT NULL AND referrer != '' THEN 
+                WHEN ae.utm_source IS NOT NULL THEN ae.utm_source
+                WHEN ae.referrer IS NOT NULL AND ae.referrer != '' THEN 
                     CASE 
-                        WHEN referrer LIKE '%google%' THEN 'Google'
-                        WHEN referrer LIKE '%facebook%' THEN 'Facebook'
-                        WHEN referrer LIKE '%twitter%' OR referrer LIKE '%t.co%' THEN 'Twitter'
-                        WHEN referrer LIKE '%linkedin%' THEN 'LinkedIn'
+                        WHEN ae.referrer LIKE '%google%' THEN 'Google'
+                        WHEN ae.referrer LIKE '%facebook%' THEN 'Facebook'
+                        WHEN ae.referrer LIKE '%twitter%' OR ae.referrer LIKE '%t.co%' THEN 'Twitter'
+                        WHEN ae.referrer LIKE '%linkedin%' THEN 'LinkedIn'
                         ELSE 'Referral'
                     END
                 ELSE 'Direct'
-            END as source,
-            COUNT(DISTINCT session_id) as visitor_count
-        FROM analytics_events
-        WHERE created_at >= NOW() - (days_back || ' days')::INTERVAL
-        AND event_type = 'page_view'
-        GROUP BY source
+            END as src,
+            COUNT(DISTINCT ae.session_id) as vis_count
+        FROM analytics_events ae
+        WHERE ae.created_at >= NOW() - (days_back || ' days')::INTERVAL
+        AND ae.event_type = 'page_view'
+        GROUP BY src
     ),
     total_visitors AS (
-        SELECT SUM(visitor_count) as total FROM source_counts
+        SELECT SUM(vis_count) as total FROM source_counts
     )
     SELECT 
-        sc.source,
-        sc.visitor_count,
-        ROUND((sc.visitor_count::NUMERIC / NULLIF(tv.total, 0)) * 100, 2) as percentage
+        sc.src::TEXT,
+        sc.vis_count,
+        ROUND((sc.vis_count::NUMERIC / NULLIF(tv.total, 0)) * 100, 2) as percentage
     FROM source_counts sc
     CROSS JOIN total_visitors tv
-    ORDER BY sc.visitor_count DESC;
+    ORDER BY sc.vis_count DESC;
 END;
 $$;
 
@@ -193,7 +193,7 @@ RETURNS TABLE (
     device_type TEXT,
     browser TEXT,
     source TEXT,
-    user_id UUID
+    user_id TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -201,18 +201,18 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        ae.session_id,
+        ae.session_id::TEXT,
         MIN(ae.created_at) as first_seen,
         MAX(ae.created_at) as last_seen,
         COUNT(*) FILTER (WHERE ae.event_type = 'page_view') as page_views,
-        MAX(ae.device_type) as device_type,
-        MAX(ae.browser) as browser,
-        COALESCE(MAX(ae.utm_source), 'Direct') as source,
-        MAX(ae.user_id) as user_id
+        MAX(ae.device_type)::TEXT as device_type,
+        MAX(ae.browser)::TEXT as browser,
+        COALESCE(MAX(ae.utm_source), 'Direct')::TEXT as source,
+        MAX(ae.user_id)::TEXT as user_id
     FROM analytics_events ae
     WHERE ae.created_at >= NOW() - INTERVAL '7 days'
     GROUP BY ae.session_id
-    ORDER BY last_seen DESC
+    ORDER BY MAX(ae.created_at) DESC
     LIMIT limit_count;
 END;
 $$;
