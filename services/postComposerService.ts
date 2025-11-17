@@ -36,11 +36,20 @@ const handleApiError = (error: any): boolean => {
 interface GeneratedPost {
     title: string;
     content: string;
+    category?: 'storytelling' | 'achievement' | 'help' | 'question' | 'discussion';
+    categoryReason?: string;
 }
 
 interface RuleCompliance {
     compliant: boolean;
     issues: string[];
+}
+
+interface SpamCheck {
+    isSpam: boolean;
+    spamScore: number; // 0-100
+    issues: string[];
+    suggestions: string[];
 }
 
 class PostComposerService {
@@ -296,6 +305,123 @@ Check if the post violates any rules. Return JSON:
                 description: 'Adhere to Reddit\'s site-wide rules and guidelines.'
             }
         ];
+    }
+
+    /**
+     * Check post for spam and quality issues
+     */
+    async checkSpamAndQuality(title: string, content: string, subreddit: string): Promise<SpamCheck> {
+        console.log(`🔍 Checking spam/quality for r/${subreddit}...`);
+        
+        const prompt = `Analyze this Reddit post for spam and quality issues.
+
+**POST:**
+Title: ${title}
+Content: ${content}
+Subreddit: r/${subreddit}
+
+**CHECK FOR:**
+1. Excessive self-promotion or spam
+2. Aggressive marketing language
+3. Too many links or calls-to-action
+4. Lack of value to the community
+5. Overly salesy tone
+
+**RETURN JSON:**
+\`\`\`json
+{
+  "isSpam": true/false,
+  "spamScore": 0-100,
+  "issues": ["list of specific problems"],
+  "suggestions": ["how to fix each issue"]
+}
+\`\`\`
+
+Score 0-30: Good quality
+Score 31-60: Needs improvement
+Score 61-100: Likely spam`;
+
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            
+            const responseText = response.text || '{}';
+            const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
+            
+            const result = JSON.parse(jsonStr.trim());
+            console.log(`✅ Spam check complete: ${result.spamScore}/100`);
+            return result;
+        } catch (error) {
+            console.error('❌ Spam check failed:', error);
+            // Return safe default
+            return {
+                isSpam: false,
+                spamScore: 0,
+                issues: [],
+                suggestions: []
+            };
+        }
+    }
+
+    /**
+     * Suggest content category for post
+     */
+    async suggestCategory(title: string, content: string): Promise<{
+        category: 'storytelling' | 'achievement' | 'help' | 'question' | 'discussion';
+        reason: string;
+        alternatives: Array<{category: string; reason: string}>;
+    }> {
+        console.log(`🎯 Suggesting content category...`);
+        
+        const prompt = `Analyze this post and suggest the best content category.
+
+**POST:**
+Title: ${title}
+Content: ${content}
+
+**CATEGORIES:**
+- storytelling: Sharing a personal story or journey
+- achievement: Celebrating a win or milestone
+- help: Asking for advice or assistance
+- question: Seeking specific information
+- discussion: Starting a conversation or debate
+
+**RETURN JSON:**
+\`\`\`json
+{
+  "category": "best_category",
+  "reason": "why this category fits best",
+  "alternatives": [
+    {"category": "alternative1", "reason": "why this could also work"},
+    {"category": "alternative2", "reason": "another option"}
+  ]
+}
+\`\`\``;
+
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            
+            const responseText = response.text || '{}';
+            const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
+            
+            const result = JSON.parse(jsonStr.trim());
+            console.log(`✅ Category suggested: ${result.category}`);
+            return result;
+        } catch (error) {
+            console.error('❌ Category suggestion failed:', error);
+            return {
+                category: 'discussion',
+                reason: 'Default category',
+                alternatives: []
+            };
+        }
     }
 
     /**

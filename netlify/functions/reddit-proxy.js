@@ -30,9 +30,11 @@ exports.handler = async (event) => {
 
         console.log(`📡 Proxying request to: ${url}`);
 
+        // Reddit requires a very specific User-Agent format
         const headers = {
-            'User-Agent': 'SalesFlow/1.0 (Netlify Proxy)',
-            'Accept': 'application/json'
+            'User-Agent': 'web:salesflow:v1.0.0 (by /u/salesflow)',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9'
         };
 
         // Add Basic Auth if credentials provided
@@ -44,7 +46,8 @@ exports.handler = async (event) => {
 
         const response = await fetch(url, {
             method: 'GET',
-            headers
+            headers,
+            redirect: 'follow'
         });
 
         console.log(`📥 Reddit response status: ${response.status}`);

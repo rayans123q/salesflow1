@@ -40,6 +40,17 @@ ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can insert analytics" ON analytics_events
     FOR INSERT WITH CHECK (true);
 
+-- Add is_admin column to user_settings if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'user_settings' AND column_name = 'is_admin'
+    ) THEN
+        ALTER TABLE user_settings ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+    END IF;
+END $$;
+
 -- Policy: Only admins can read analytics
 CREATE POLICY "Admins can read analytics" ON analytics_events
     FOR SELECT USING (
