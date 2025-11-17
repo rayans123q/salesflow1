@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Campaign, CampaignDateRange, LeadSource } from '../types';
 import { CloseIcon, RedditIcon, SearchIcon, SparkleIcon, TwitterIcon } from '../constants';
 import { generateCampaignDetailsFromUrl } from '../services/geminiService';
+import SubredditDiscovery from './SubredditDiscovery';
 
 interface CampaignCreatorProps {
     onBack: () => void;
@@ -39,6 +40,7 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
     const [generationError, setGenerationError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState<CampaignDateRange>('lastWeek');
     const [leadSources, setLeadSources] = useState<LeadSource[]>(['reddit']);
+    const [showSubredditDiscovery, setShowSubredditDiscovery] = useState(false);
 
     const handleKeywordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && currentKeyword.trim()) {
@@ -232,7 +234,19 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
                                 </div>
                             </div>
                             <div>
-                                <label htmlFor="subreddits" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Target Subreddits (optional)</label>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label htmlFor="subreddits" className="block text-sm font-medium text-[var(--text-secondary)]">Target Subreddits (optional)</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSubredditDiscovery(true)}
+                                        disabled={!offer || keywords.length === 0}
+                                        className="bg-violet-600 text-white px-3 py-1.5 rounded-lg hover:bg-violet-700 flex items-center gap-1.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title={!offer || keywords.length === 0 ? "Add offer and keywords first" : "Discover subreddits with AI"}
+                                    >
+                                        <SparkleIcon className="w-4 h-4" />
+                                        Discover with AI
+                                    </button>
+                                </div>
                                 <input
                                     id="subreddits" type="text" value={currentSubreddit} onChange={(e) => setCurrentSubreddit(e.target.value)}
                                     onKeyDown={handleSubredditKeyDown} placeholder="e.g., r/webdev (press Enter)"
@@ -294,6 +308,19 @@ const CampaignCreator: React.FC<CampaignCreatorProps> = ({ onBack, onCreate }) =
                 <StepIndicator step={2} currentStep={step} label="Setup" />
             </div>
             {renderStep()}
+            
+            {showSubredditDiscovery && (
+                <SubredditDiscovery
+                    campaignDescription={offer}
+                    keywords={keywords}
+                    onSubredditsSelected={(discoveredSubs) => {
+                        const newSubs = discoveredSubs.filter(sub => !subreddits.includes(sub));
+                        setSubreddits([...subreddits, ...newSubs]);
+                        setShowSubredditDiscovery(false);
+                    }}
+                    onClose={() => setShowSubredditDiscovery(false)}
+                />
+            )}
         </div>
     );
 };
