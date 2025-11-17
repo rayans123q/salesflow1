@@ -94,8 +94,23 @@ ${rulesText}
 9. Be specific about what the product actually does based on the description
 10. Don't exaggerate or oversell - be honest and helpful
 
+**CRITICAL - NATURAL HUMAN WRITING:**
+❌ NEVER use these AI markers in the content:
+- Underscores for emphasis (_like this_)
+- Hashtags (#likeThis)
+- Asterisks for bold (**like this**)
+- Excessive bullet points or numbered lists
+- Section headers with formatting
+- Any markdown or formatting that screams "AI wrote this"
+
+✅ INSTEAD, write naturally:
+- Use regular punctuation and capitalization
+- Write in flowing paragraphs with natural breaks
+- Use "quotes" for emphasis if needed
+- Write exactly how a real person would post on Reddit
+
 **TONE EXAMPLES:**
-❌ BAD (too salesy): "This amazing tool revolutionized my workflow! It's a game-changer!"
+❌ BAD (too salesy): "This **amazing** tool _revolutionized_ my workflow! It's a game-changer! #productivity"
 ✅ GOOD (authentic): "Been using this for a few weeks and it's helped me save about 5 hours/week on lead gen"
 
 ❌ BAD (generic): "It helps you find leads and grow your business!"
@@ -105,11 +120,11 @@ ${rulesText}
 \`\`\`json
 {
   "title": "Engaging post title here",
-  "content": "Full post content here with proper formatting"
+  "content": "Full post content here - write naturally like a human, NO formatting markers"
 }
 \`\`\`
 
-Generate the post now:`;
+Generate the post now. Make it indistinguishable from a real human post:`;
 
         try {
             // Try Gemini first

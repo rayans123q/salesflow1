@@ -454,12 +454,29 @@ export const generateComment = async (
     -   Length: ${styleSettings.length}
     -   ${platformAuthenticity}
 
+    **CRITICAL - NATURAL HUMAN WRITING:**
+    ❌ NEVER use these AI markers:
+    - Underscores for emphasis (like _this_)
+    - Hashtags (#likeThis)
+    - Asterisks for bold (**like this**)
+    - Numbered lists (1. 2. 3.)
+    - Bullet points (• or -)
+    - Section headers or formatting markers
+    - Emojis (unless the platform culture uses them heavily)
+    
+    ✅ INSTEAD, write naturally:
+    - Use regular punctuation and capitalization
+    - Write in flowing paragraphs or simple line breaks
+    - Use "quotes" for emphasis if needed
+    - Write exactly how you'd text a friend
+
     **WHAT TO AVOID:**
     ❌ Marketing buzzwords: "game-changer", "revolutionary", "amazing", "incredible"
     ❌ Overselling: "This will solve all your problems!"
     ❌ Making up features not in the product description
     ❌ Sounding like a salesperson or bot
     ❌ Being overly enthusiastic or promotional
+    ❌ Any formatting that looks AI-generated
 
     **WHAT TO DO:**
     ✅ Write like a real person sharing their experience
@@ -467,15 +484,16 @@ export const generateComment = async (
     ✅ Mention limitations or context where it works best
     ✅ Focus on the problem it solved for you
     ✅ Use casual, conversational language
+    ✅ Make it indistinguishable from human-written text
 
     **EXAMPLES OF GOOD VS BAD:**
-    ❌ BAD: "You should definitely try SalesFlow! It's an amazing tool that will revolutionize your lead generation!"
+    ❌ BAD: "You should definitely try SalesFlow! It's an **amazing** tool that will _revolutionize_ your lead generation! #productivity"
     ✅ GOOD: "I've been using SalesFlow for a couple months. It basically scans Reddit for people asking about [problem] and helps me find relevant threads. Saves me maybe 4-5 hours a week vs manually searching."
 
     ${styleSettings.customOffer ? `**FOCUS ON:** ${styleSettings.customOffer}` : ''}
     ${styleSettings.includeWebsiteLink && campaign.websiteUrl ? `**LINK (use naturally if relevant):** ${campaign.websiteUrl}` : '**DO NOT include any links.**'}
 
-    Generate an authentic, helpful comment now:
+    Generate an authentic, helpful comment now. Output ONLY the comment text with NO formatting markers:
   `;
   
   try {
