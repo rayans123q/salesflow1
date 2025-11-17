@@ -65,6 +65,12 @@ CREATE POLICY "Admins can read analytics" ON analytics_events
 -- 2. CREATE ANALYTICS DATABASE FUNCTIONS
 -- ============================================
 
+-- Drop existing functions first to avoid conflicts
+DROP FUNCTION IF EXISTS get_daily_visitor_stats(INTEGER);
+DROP FUNCTION IF EXISTS get_device_stats(INTEGER);
+DROP FUNCTION IF EXISTS get_traffic_sources(INTEGER);
+DROP FUNCTION IF EXISTS get_recent_visitors(INTEGER);
+
 -- Function: Get daily visitor stats
 CREATE OR REPLACE FUNCTION get_daily_visitor_stats(days_back INTEGER DEFAULT 30)
 RETURNS TABLE (
