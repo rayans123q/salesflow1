@@ -26,38 +26,55 @@ interface SubredditRules {
 
 class SubredditRulesService {
     /**
-     * Fetch rules for a subreddit from Reddit API
+     * Fetch rules for a subreddit - ALWAYS checks database first to save API calls
+     * Only fetches from Reddit/scraper if not in database or cache is expired
      */
     async fetchRules(subredditName: string): Promise<SubredditRules> {
-        console.log(`📋 Fetching rules for r/${subredditName}...`);
+        const cleanName = subredditName.replace(/^r\//, '');
+        console.log(`📋 Fetching rules for r/${cleanName}...`);
 
         try {
-            // Check if we have cached rules (less than 7 days old)
-            const cached = await this.getCachedRules(subredditName);
-            if (cached && this.isCacheValid(cached.last_fetched)) {
-                console.log(`✅ Using cached rules for r/${subredditName}`);
-                return cached;
+            // STEP 1: Check database first (this is the key optimization!)
+            console.log(`🔍 Checking database for cached rules...`);
+            const cached = await this.getCachedRules(cleanName);
+            
+            if (cached) {
+                const cacheAge = this.getCacheAge(cached.last_fetched);
+                console.log(`📦 Found cached rules (${cacheAge} days old)`);
+                
+                // If cache is valid (less than 7 days), use it immediately
+                if (this.isCacheValid(cached.last_fetched)) {
+                    console.log(`✅ Using fresh cached rules for r/${cleanName} (no API call needed!)`);
+                    return cached;
+                }
+                
+                // Cache is expired but exists - try to refresh in background
+                console.log(`⏰ Cache expired, fetching fresh rules...`);
+            } else {
+                console.log(`❌ No cached rules found, fetching from Reddit...`);
             }
 
-            // Fetch fresh rules from Reddit
-            const rules = await this.fetchFromReddit(subredditName);
+            // STEP 2: Fetch fresh rules from Reddit (only if not cached or expired)
+            const rules = await this.fetchFromReddit(cleanName);
             
-            // Save to database
+            // STEP 3: Save to database for future users
             await this.saveRules(rules);
+            console.log(`💾 Saved rules to database for future use`);
 
-            console.log(`✅ Fetched ${rules.rules.length} rules for r/${subredditName}`);
+            console.log(`✅ Fetched ${rules.rules.length} rules for r/${cleanName}`);
             return rules;
 
         } catch (error) {
-            console.error(`❌ Failed to fetch rules for r/${subredditName}:`, error);
+            console.error(`❌ Failed to fetch rules for r/${cleanName}:`, error);
             
-            // Return cached rules if available, even if expired
-            const cached = await this.getCachedRules(subredditName);
+            // FALLBACK: Return cached rules if available, even if expired
+            const cached = await this.getCachedRules(cleanName);
             if (cached) {
-                console.log(`⚠️ Using expired cached rules for r/${subredditName}`);
+                console.log(`⚠️ Using expired cached rules for r/${cleanName} (better than nothing!)`);
                 return cached;
             }
 
+            // No cache available, throw error
             throw error;
         }
     }
@@ -169,14 +186,13 @@ class SubredditRulesService {
     }
 
     /**
-     * Get subreddit-specific rules using AI when Reddit API is unavailable
-     * This generates realistic rules based on the subreddit name and common patterns
+     * Get REAL subreddit rules using AI with Google Search
+     * This searches the actual Reddit page and extracts real rules
      */
     private async getDefaultRules(subredditName: string): Promise<SubredditRules> {
-        console.log(`🤖 Generating realistic rules for r/${subredditName} using AI...`);
+        console.log(`🔍 Fetching REAL rules for r/${subredditName} using AI + Google Search...`);
         
         try {
-            // Use Gemini to generate realistic subreddit-specific rules
             const { GoogleGenAI } = await import("@google/genai");
             const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY;
             
@@ -186,31 +202,44 @@ class SubredditRulesService {
             
             const ai = new GoogleGenAI({ apiKey });
             
-            const prompt = `Generate realistic posting rules for the subreddit r/${subredditName}.
+            const prompt = `Search Google for the ACTUAL posting rules of r/${subredditName} on Reddit.
 
-Based on the subreddit name and common Reddit patterns, create 4-6 specific rules that would likely exist for this community.
+**TASK:**
+1. Use Google Search to find: "site:reddit.com/r/${subredditName} rules" OR "r/${subredditName} posting rules"
+2. Visit the subreddit's rules page or sidebar
+3. Extract the REAL, ACTUAL rules that are published on that subreddit
+4. Return the exact rules as they appear on Reddit
 
-**SUBREDDIT:** r/${subredditName}
+**IMPORTANT:**
+- These must be the REAL rules from the actual subreddit
+- Do NOT make up or guess rules
+- If you can't find specific rules, say so
+- Include the exact rule titles and descriptions from Reddit
 
 **RETURN JSON:**
 \`\`\`json
 {
+  "found_real_rules": true/false,
   "rules": [
     {
-      "title": "Rule title",
-      "description": "Detailed description of the rule"
+      "title": "Exact rule title from Reddit",
+      "description": "Exact rule description from Reddit"
     }
   ],
-  "posting_requirements": "Brief summary of posting requirements",
-  "allows_self_promotion": true/false
+  "posting_requirements": "Any posting requirements mentioned",
+  "allows_self_promotion": true/false,
+  "source": "URL where you found the rules"
 }
 \`\`\`
 
-Make the rules specific to this subreddit's likely topic and community culture.`;
+Search now and return the REAL rules for r/${subredditName}:`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.5-pro',
                 contents: prompt,
+                config: {
+                    tools: [{ googleSearch: {} }]
+                }
             });
             
             const responseText = response.text || '{}';
@@ -218,27 +247,33 @@ Make the rules specific to this subreddit's likely topic and community culture.`
             const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
             const aiRules = JSON.parse(jsonStr.trim());
             
-            console.log(`✅ Generated ${aiRules.rules.length} AI rules for r/${subredditName}`);
-            
-            return {
-                subreddit_name: subredditName,
-                rules: aiRules.rules.map((r: any, i: number) => ({
-                    title: r.title,
-                    description: r.description,
-                    kind: 'all',
-                    priority: i
-                })),
-                posting_requirements: aiRules.posting_requirements || 'Check subreddit sidebar before posting.',
-                karma_requirement: 0,
-                account_age_days: 0,
-                allows_links: aiRules.allows_self_promotion !== false,
-                allows_images: true,
-                allows_videos: true,
-                last_fetched: new Date().toISOString()
-            };
+            if (aiRules.found_real_rules && aiRules.rules && aiRules.rules.length > 0) {
+                console.log(`✅ Found ${aiRules.rules.length} REAL rules for r/${subredditName} via AI search`);
+                console.log(`📍 Source: ${aiRules.source || 'Reddit'}`);
+                
+                return {
+                    subreddit_name: subredditName,
+                    rules: aiRules.rules.map((r: any, i: number) => ({
+                        title: r.title,
+                        description: r.description,
+                        kind: 'all',
+                        priority: i
+                    })),
+                    posting_requirements: aiRules.posting_requirements || 'Check subreddit sidebar before posting.',
+                    karma_requirement: 0,
+                    account_age_days: 0,
+                    allows_links: aiRules.allows_self_promotion !== false,
+                    allows_images: true,
+                    allows_videos: true,
+                    last_fetched: new Date().toISOString()
+                };
+            } else {
+                console.warn(`⚠️ AI could not find real rules for r/${subredditName}`);
+                return this.getFallbackRules(subredditName);
+            }
             
         } catch (error) {
-            console.error('❌ AI rule generation failed:', error);
+            console.error('❌ AI search failed:', error);
             return this.getFallbackRules(subredditName);
         }
     }
@@ -357,16 +392,27 @@ Make the rules specific to this subreddit's likely topic and community culture.`
      * Check if cached rules are still valid (less than 7 days old)
      */
     private isCacheValid(lastFetched: string): boolean {
-        const fetchedDate = new Date(lastFetched);
-        const now = new Date();
-        const daysDiff = (now.getTime() - fetchedDate.getTime()) / (1000 * 60 * 60 * 24);
+        const daysDiff = this.getCacheAge(lastFetched);
         return daysDiff < 7;
     }
 
     /**
-     * Save rules to database
+     * Get cache age in days
+     */
+    private getCacheAge(lastFetched: string): number {
+        const fetchedDate = new Date(lastFetched);
+        const now = new Date();
+        const daysDiff = (now.getTime() - fetchedDate.getTime()) / (1000 * 60 * 60 * 24);
+        return Math.floor(daysDiff);
+    }
+
+    /**
+     * Save rules to database for all users to benefit from
+     * This prevents duplicate API calls and saves costs
      */
     private async saveRules(rules: SubredditRules): Promise<void> {
+        console.log(`💾 Saving rules for r/${rules.subreddit_name} to database...`);
+        
         const { error } = await supabase
             .from('subreddit_rules')
             .upsert({
@@ -384,13 +430,36 @@ Make the rules specific to this subreddit's likely topic and community culture.`
             });
 
         if (error) {
-            console.error('❌ Failed to save rules:', error);
+            console.error('❌ Failed to save rules to database:', error);
+            // Don't throw - saving to cache is not critical
+            console.warn('⚠️ Continuing without cache...');
+        } else {
+            console.log(`✅ Rules saved! Future users will get instant results from database.`);
+        }
+    }
+
+    /**
+     * Force refresh rules from Reddit (bypass cache)
+     * Useful for admins or when rules are known to have changed
+     */
+    async forceRefreshRules(subredditName: string): Promise<SubredditRules> {
+        const cleanName = subredditName.replace(/^r\//, '');
+        console.log(`🔄 Force refreshing rules for r/${cleanName}...`);
+
+        try {
+            const rules = await this.fetchFromReddit(cleanName);
+            await this.saveRules(rules);
+            console.log(`✅ Force refresh complete for r/${cleanName}`);
+            return rules;
+        } catch (error) {
+            console.error(`❌ Force refresh failed for r/${cleanName}:`, error);
             throw error;
         }
     }
 
     /**
      * Get rules for multiple subreddits
+     * Efficiently uses cache to minimize API calls
      */
     async fetchMultipleRules(subredditNames: string[]): Promise<SubredditRules[]> {
         const results: SubredditRules[] = [];
@@ -400,14 +469,49 @@ Make the rules specific to this subreddit's likely topic and community culture.`
                 const rules = await this.fetchRules(name);
                 results.push(rules);
                 
-                // Rate limiting
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Rate limiting (only needed if fetching from Reddit)
+                await new Promise(resolve => setTimeout(resolve, 500));
             } catch (error) {
                 console.warn(`⚠️ Skipping r/${name} due to error`);
             }
         }
 
         return results;
+    }
+
+    /**
+     * Get cache statistics (useful for monitoring)
+     */
+    async getCacheStats(): Promise<{
+        totalCached: number;
+        validCache: number;
+        expiredCache: number;
+    }> {
+        const { data, error } = await supabase
+            .from('subreddit_rules')
+            .select('last_fetched');
+
+        if (error || !data) {
+            return { totalCached: 0, validCache: 0, expiredCache: 0 };
+        }
+
+        const now = new Date();
+        let validCache = 0;
+        let expiredCache = 0;
+
+        for (const row of data) {
+            if (this.isCacheValid(row.last_fetched)) {
+                validCache++;
+            } else {
+                expiredCache++;
+            }
+        }
+
+        return {
+            totalCached: data.length,
+            validCache,
+            expiredCache
+        };
     }
 
     /**
