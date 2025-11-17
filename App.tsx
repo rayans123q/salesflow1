@@ -17,6 +17,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import OnboardingTour from './components/OnboardingTour';
 import PaymentGate from './components/PaymentGate';
 import ThankYouPage from './components/ThankYouPage';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { databaseService } from './services/databaseService';
 import { analyticsService } from './services/analyticsService';
 import { supabase } from './services/supabaseClient';
@@ -960,6 +961,7 @@ const App: React.FC = () => {
         return (
             <>
                 <LandingPage onLogin={handleLogin} />
+                <PWAInstallPrompt />
                 <LoginModal 
                     isOpen={showLoginModal} 
                     onClose={() => setShowLoginModal(false)}
@@ -989,6 +991,7 @@ const App: React.FC = () => {
     return (
         <div className="md:flex md:h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
             {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
+            <PWAInstallPrompt />
             <Sidebar currentPage={page} setPage={setPage} usage={usage} limits={limits} user={user} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
                 {/* Subscription banner removed - users upgrade via button clicks instead */}
