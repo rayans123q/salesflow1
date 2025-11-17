@@ -69,17 +69,12 @@ class SubredditRulesService {
     private async fetchFromReddit(subredditName: string): Promise<SubredditRules> {
         const cleanName = subredditName.replace(/^r\//, '');
 
-        // Return default rules immediately - Reddit API is too unreliable
-        console.log('ℹ️ Using default Reddit guidelines (Reddit API is unreliable)');
-        return this.getDefaultRules(cleanName);
-
-        /* Reddit API is blocked too often, keeping this code for reference:
-        
+        // Try Reddit API with improved proxy
         const rulesUrl = `https://www.reddit.com/r/${cleanName}/about/rules.json`;
         const aboutUrl = `https://www.reddit.com/r/${cleanName}/about.json`;
 
         try {
-            console.log('📡 Attempting to fetch from Reddit...');
+            console.log('📡 Fetching real rules from Reddit...');
             
             const rulesResponse = await fetch('/.netlify/functions/reddit-proxy', {
                 method: 'POST',
@@ -94,7 +89,7 @@ class SubredditRulesService {
             });
 
             if (!rulesResponse.ok || !aboutResponse.ok) {
-                console.warn('⚠️ Reddit API blocked, using defaults');
+                console.warn(`⚠️ Reddit API failed (${rulesResponse.status}), using defaults`);
                 return this.getDefaultRules(cleanName);
             }
 
