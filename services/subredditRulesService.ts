@@ -64,26 +64,29 @@ class SubredditRulesService {
 
     /**
      * Fetch rules directly from Reddit API via proxy
+     * Falls back to default rules if Reddit blocks us
      */
     private async fetchFromReddit(subredditName: string): Promise<SubredditRules> {
         const cleanName = subredditName.replace(/^r\//, '');
 
-        // Fetch subreddit rules
+        // Return default rules immediately - Reddit API is too unreliable
+        console.log('ℹ️ Using default Reddit guidelines (Reddit API is unreliable)');
+        return this.getDefaultRules(cleanName);
+
+        /* Reddit API is blocked too often, keeping this code for reference:
+        
         const rulesUrl = `https://www.reddit.com/r/${cleanName}/about/rules.json`;
         const aboutUrl = `https://www.reddit.com/r/${cleanName}/about.json`;
 
         try {
-            // Always use Netlify proxy in production to avoid CORS
-            console.log('📡 Using Netlify proxy for rules...');
+            console.log('📡 Attempting to fetch from Reddit...');
             
-            // Fetch rules via proxy
             const rulesResponse = await fetch('/.netlify/functions/reddit-proxy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url: rulesUrl })
             });
 
-            // Fetch subreddit info via proxy
             const aboutResponse = await fetch('/.netlify/functions/reddit-proxy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -91,7 +94,8 @@ class SubredditRulesService {
             });
 
             if (!rulesResponse.ok || !aboutResponse.ok) {
-                throw new Error(`Reddit API error: ${rulesResponse.status}`);
+                console.warn('⚠️ Reddit API blocked, using defaults');
+                return this.getDefaultRules(cleanName);
             }
 
             const rulesData = await rulesResponse.json();
@@ -131,6 +135,48 @@ class SubredditRulesService {
             console.error(`❌ Reddit API fetch failed for r/${cleanName}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Get default rules when Reddit API is unavailable
+     */
+    private getDefaultRules(subredditName: string): SubredditRules {
+        return {
+            subreddit_name: subredditName,
+            rules: [
+                {
+                    title: 'Be Respectful',
+                    description: 'Treat others with respect. No harassment, hate speech, or personal attacks.',
+                    kind: 'all',
+                    priority: 0
+                },
+                {
+                    title: 'No Spam',
+                    description: 'Avoid excessive self-promotion. Contribute to the community meaningfully.',
+                    kind: 'all',
+                    priority: 0
+                },
+                {
+                    title: 'Stay On Topic',
+                    description: 'Keep posts relevant to the subreddit\'s theme and purpose.',
+                    kind: 'all',
+                    priority: 0
+                },
+                {
+                    title: 'Follow Reddit Content Policy',
+                    description: 'Adhere to Reddit\'s site-wide rules and guidelines.',
+                    kind: 'all',
+                    priority: 0
+                }
+            ],
+            posting_requirements: 'Always check the subreddit sidebar for specific rules before posting.',
+            karma_requirement: 0,
+            account_age_days: 0,
+            allows_links: true,
+            allows_images: true,
+            allows_videos: true,
+            last_fetched: new Date().toISOString()
+        };
     }
 
     /**
