@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Theme, RedditCredentials, AIStyleSettings, Tone, SalesApproach, ResponseLength, User, Subscription } from '../types';
 import { CheckIcon, LinkIcon } from '../constants';
+import NotificationSettings from './NotificationSettings';
 
 interface SettingsProps {
     theme: Theme;
@@ -213,6 +214,9 @@ const Settings: React.FC<SettingsProps> = (props) => {
                         </button>
                     </div>
                 </SettingsSection>
+
+                {/* Notification Settings */}
+                <NotificationSettings />
 
                 <SettingsSection
                     title="Default AI Style"
