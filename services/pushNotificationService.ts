@@ -12,7 +12,7 @@ interface PushSubscription {
 }
 
 class PushNotificationService {
-  private vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LY'; // Replace with your actual VAPID public key
+  private vapidPublicKey = 'BJC_CZqX3buOKvtQQYcHwtB2F8yi6GNLazYRhzWi9Z-5wFTDVB5L2wt82Y82BUAIXlU-5jjHCr6-JU-fPuvfl4A'; // Replace with your actual VAPID public key
 
   // Check if push notifications are supported
   isSupported(): boolean {
