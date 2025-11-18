@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Theme, RedditCredentials, AIStyleSettings, Tone, SalesApproach, ResponseLength, User, Subscription } from '../types';
 import { CheckIcon, LinkIcon } from '../constants';
 import NotificationSettings from './NotificationSettings';
+import KeywordAlertManager from './KeywordAlertManager';
 
 interface SettingsProps {
     theme: Theme;
@@ -217,6 +218,9 @@ const Settings: React.FC<SettingsProps> = (props) => {
 
                 {/* Notification Settings */}
                 <NotificationSettings />
+
+                {/* Keyword Alert Manager */}
+                <KeywordAlertManager />
 
                 <SettingsSection
                     title="Default AI Style"
