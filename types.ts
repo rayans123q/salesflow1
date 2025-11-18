@@ -30,6 +30,9 @@ export interface Campaign {
   createdAt: string;
   lastRefreshed: string | null;
   leadSources: LeadSource[];
+  autoRefreshEnabled?: boolean;
+  autoRefreshInterval?: 'daily' | 'every12hours' | 'every6hours' | 'every3hours';
+  nextAutoRefresh?: string | null;
 }
 
 export interface Post {
