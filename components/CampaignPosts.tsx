@@ -6,8 +6,10 @@ import AiResponseGeneratorModal from './AiResponseGeneratorModal';
 import ConfirmationModal from './ConfirmationModal';
 import SubredditRules from './SubredditRules';
 import PostComposer from './PostComposer';
+import AutoRefreshSettings from './AutoRefreshSettings';
 import { generateComment } from '../services/geminiService';
 import { whopService } from '../services/whopService';
+import { databaseService } from '../services/databaseService';
 
 interface CampaignPostsProps {
     campaign: Campaign;
@@ -301,6 +303,16 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
         onDeleteCampaign(campaign.id);
         setDeleteModalOpen(false);
     };
+    
+    const handleUpdateCampaign = async (updates: Partial<Campaign>) => {
+        try {
+            await databaseService.updateCampaign(campaign.id, updates);
+            // Update local campaign state if needed
+            // You might want to add a callback prop to refresh the campaign data
+        } catch (error) {
+            console.error('Failed to update campaign:', error);
+        }
+    };
 
     const handleApplyFilters = (statuses: Post['status'][]) => {
         setActiveFilters({ statuses });
@@ -366,6 +378,11 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
                 <div className="bg-[var(--bg-secondary)] p-4 rounded-xl text-center"><span className="text-3xl font-bold">{campaign.leadsFound}</span><p className="text-[var(--text-secondary)]">Total Posts Found</p></div>
                 <div className="bg-[var(--bg-secondary)] p-4 rounded-xl text-center"><span className="text-3xl font-bold">{campaign.highPotential}</span><p className="text-[var(--text-secondary)]">High Potential</p></div>
                 <div className="bg-[var(--bg-secondary)] p-4 rounded-xl text-center"><span className="text-3xl font-bold">{campaign.contacted}</span><p className="text-[var(--text-secondary)]">Contacted</p></div>
+            </div>
+            
+            {/* Auto-Refresh Settings */}
+            <div className="mb-8">
+                <AutoRefreshSettings campaign={campaign} onUpdate={handleUpdateCampaign} />
             </div>
             
             {refreshResult !== null && (
