@@ -243,6 +243,9 @@ export const databaseService = {
     if (updates.dateRange !== undefined) updateData.date_range = updates.dateRange;
     if (updates.lastRefreshed !== undefined) updateData.last_refreshed = updates.lastRefreshed;
     if (updates.leadSources !== undefined) updateData.lead_sources = updates.leadSources;
+    if (updates.autoRefreshEnabled !== undefined) updateData.auto_refresh_enabled = updates.autoRefreshEnabled;
+    if (updates.autoRefreshInterval !== undefined) updateData.auto_refresh_interval = updates.autoRefreshInterval;
+    if (updates.nextAutoRefresh !== undefined) updateData.next_auto_refresh = updates.nextAutoRefresh;
     
     const { data, error } = await supabase
       .from('campaigns')
@@ -269,6 +272,9 @@ export const databaseService = {
       createdAt: data.created_at,
       lastRefreshed: data.last_refreshed,
       leadSources: data.lead_sources,
+      autoRefreshEnabled: data.auto_refresh_enabled,
+      autoRefreshInterval: data.auto_refresh_interval,
+      nextAutoRefresh: data.next_auto_refresh,
     };
   },
 
