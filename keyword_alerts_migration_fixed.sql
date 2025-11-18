@@ -1,4 +1,4 @@
--- Keyword Alerts System Migration
+-- Keyword Alerts System Migration (FIXED)
 -- Creates tables for real-time keyword monitoring and alerts
 
 -- ============================================
