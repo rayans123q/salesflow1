@@ -1,5 +1,6 @@
--- Keyword Alerts System Migration
+-- Keyword Alerts System Migration - SIMPLE VERSION
 -- Creates tables for real-time keyword monitoring and alerts
+-- This version removes complex indexes that cause issues
 
 -- ============================================
 -- 1. Keyword Alerts Table
@@ -63,22 +64,22 @@ CREATE TABLE IF NOT EXISTS push_notification_tokens (
 );
 
 -- ============================================
--- 5. Indexes for Performance
+-- 5. Simple Indexes (no WHERE clauses)
 -- ============================================
-CREATE INDEX IF NOT EXISTS idx_keyword_alerts_user_active 
-ON keyword_alerts(user_id) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_keyword_alerts_user 
+ON keyword_alerts(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_keyword_alerts_keywords 
 ON keyword_alerts USING GIN(keywords);
 
 CREATE INDEX IF NOT EXISTS idx_keyword_alert_matches_alert 
-ON keyword_alert_matches(alert_id, created_at DESC);
+ON keyword_alert_matches(alert_id);
 
-CREATE INDEX IF NOT EXISTS idx_keyword_alert_matches_notification 
-ON keyword_alert_matches(notification_sent, created_at) WHERE notification_sent = FALSE;
+CREATE INDEX IF NOT EXISTS idx_keyword_alert_matches_created 
+ON keyword_alert_matches(created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_push_tokens_user_active
-ON push_notification_tokens(user_id) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user
+ON push_notification_tokens(user_id);
 
 -- ============================================
 -- 6. RLS Policies

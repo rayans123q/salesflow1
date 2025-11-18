@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS push_notification_tokens (
 -- 5. Indexes for Performance
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_keyword_alerts_user_active 
-ON keyword_alerts(user_id, is_active) WHERE is_active = TRUE;
+ON keyword_alerts(user_id) WHERE is_active = TRUE;
 
 CREATE INDEX IF NOT EXISTS idx_keyword_alerts_keywords 
 ON keyword_alerts USING GIN(keywords);
