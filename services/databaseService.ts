@@ -182,6 +182,9 @@ export const databaseService = {
       createdAt: c.created_at,
       lastRefreshed: c.last_refreshed,
       leadSources: c.lead_sources,
+      autoRefreshEnabled: c.auto_refresh_enabled,
+      autoRefreshInterval: c.auto_refresh_interval,
+      nextAutoRefresh: c.next_auto_refresh,
     }));
   },
 
