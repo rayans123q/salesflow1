@@ -49,6 +49,5 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 # Scheduled Functions
-[[functions]]
-  path = "netlify/functions/auto-refresh-campaigns.js"
+[functions."auto-refresh-campaigns"]
   schedule = "0 * * * *"  # Run every hour at minute 0
