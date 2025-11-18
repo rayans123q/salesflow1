@@ -166,7 +166,8 @@ const FilterPopover: React.FC<{
 }
 
 
-const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, onPostContacted, savedAiStyle, setSavedAiStyle, onDeleteCampaign, onRefreshCampaign, onGenerateAiResponse, commentHistory, onAddCommentToHistory, userEmail }) => {
+const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign: initialCampaign, posts, onBack, onPostContacted, savedAiStyle, setSavedAiStyle, onDeleteCampaign, onRefreshCampaign, onGenerateAiResponse, commentHistory, onAddCommentToHistory, userEmail }) => {
+    const [campaign, setCampaign] = useState<Campaign>(initialCampaign);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [isCommentModalOpen, setCommentModalOpen] = useState(false);
     const [isAiModalOpen, setAiModalOpen] = useState(false);
@@ -182,6 +183,11 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
     const [isCheckingSubscription, setIsCheckingSubscription] = useState<boolean>(true);
     const [selectedSubredditForRules, setSelectedSubredditForRules] = useState<string | null>(null);
     const [showPostComposer, setShowPostComposer] = useState(false);
+    
+    // Update local campaign when prop changes
+    useEffect(() => {
+        setCampaign(initialCampaign);
+    }, [initialCampaign]);
 
     // Check subscription status on mount and when user changes
     useEffect(() => {
@@ -306,11 +312,12 @@ const CampaignPosts: React.FC<CampaignPostsProps> = ({ campaign, posts, onBack, 
     
     const handleUpdateCampaign = async (updates: Partial<Campaign>) => {
         try {
-            await databaseService.updateCampaign(campaign.id, updates);
-            // Update local campaign state if needed
-            // You might want to add a callback prop to refresh the campaign data
+            const updatedCampaign = await databaseService.updateCampaign(campaign.id, updates);
+            // Update local campaign state
+            setCampaign(updatedCampaign);
+            console.log('✅ Campaign updated successfully:', updatedCampaign);
         } catch (error) {
-            console.error('Failed to update campaign:', error);
+            console.error('❌ Failed to update campaign:', error);
         }
     };
 
